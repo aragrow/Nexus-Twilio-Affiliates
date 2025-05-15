@@ -238,7 +238,7 @@ add_action('rest_api_init', function () {
  */
 function custom_jwt_expiration($expiration)
 {
-	return 300;
+	return 300 * 12 * 12;
 }
 
 add_filter('graphql_jwt_auth_expire', 'custom_jwt_expiration', 10);

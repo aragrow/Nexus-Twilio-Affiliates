@@ -51,18 +51,31 @@ const styles: { [key: string]: React.CSSProperties } = {
     transition: 'background 0.3s ease, box-shadow 0.3s ease',
   },
   backButton: {
-    backgroundColor: '#3498db',
+    backgroundColor: 'linear-gradient(135deg, #6a11cb, #2575fc)',
     color: '#fff',
     border: 'none',
-    padding: '0.6rem 1.2rem',
-    borderRadius: '8px',
+    padding: '0.8rem 1.5rem',
+    borderRadius: '200px 0 0 200px',
     cursor: 'pointer',
     fontSize: '1rem',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    transition: 'background-color 0.3s ease',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+    transition: 'all 0.4s ease',
+    position: 'relative',
+    overflow: 'hidden',
   },
   backButtonHover: {
-    backgroundColor: '#2980b9',
+    backgroundColor: 'linear-gradient(135deg, #2575fc, #6a11cb)',
+    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.3)',
+    transform: 'translateY(-3px)',
+  },
+  backButtonDisabled: {
+    backgroundColor: '#95a5a6',
+    cursor: 'not-allowed',
+    boxShadow: 'none',
+    opacity: 0.6,
   },
   dashboardTitle: {
     margin: 0,
@@ -72,8 +85,15 @@ const styles: { [key: string]: React.CSSProperties } = {
   welcomeMessage: {
     fontSize: '1.1rem',
     fontWeight: 500,
+    float: 'right',
+    marginRight: '2rem',
   },
   dashboardMain: {
+    background: 'linear-gradient(to right, #f5f7fa, #c3cfe2)',
+    backgroundImage: `url('http://localhost:5173/src/assets/dashboard-background.jpg'), linear-gradient(to right, #f5f7fa, #c3cfe2)`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'center center',
+    backgroundSize: 'cover',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
@@ -81,13 +101,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: '2rem',
     padding: '3rem',
     flexGrow: 1,
-    background: 'radial-gradient(circle at top left, #ffffff, #dfe9f3)',
+    //background: 'radial-gradient(circle at top left, #ffffff, #dfe9f3)',
     width: '93vw',
-    height: '75vh',    
-
+    height: '75vh',
   },
   dashboardCard: {
-    background: 'linear-gradient(135deg, #ffffff, #f1f2f6)',
+    background: 'linear-gradient(135deg, #c2c2c2, #f1f2f6)',
     border: '2px solid #bdc3c7',
     borderRadius: '16px',
     padding: '2rem',
@@ -117,6 +136,48 @@ const styles: { [key: string]: React.CSSProperties } = {
     boxShadow: 'inset 0 4px 10px rgba(0, 0, 0, 0.1)',
     borderColor: '#2980b9',
     background: 'linear-gradient(135deg, #d6eaf8, #aed6f1)',
+  },
+  dashboardAffiliateCard: {
+    backgroundImage: `url('http://localhost:5173/src/assets/affiliates-background.jpg'), linear-gradient(to right, #f5f7fa, #c3cfe2)`,
+  },
+  powerButton: {
+    float: 'right',
+    width: '50px',
+    height: '50px',
+    borderRadius: '50%',
+    background: 'radial-gradient(circle at center, #3cc0f0 0%, #0a8ac7 40%, #0e0e0e 100%)',
+    border: '6px solid #a0c4d6',
+    boxShadow: `
+      inset 0 0 10px #3cc0f0,
+      0 0 20px rgba(0, 255, 255, 0.2),
+      0 0 40px rgba(0, 255, 255, 0.2)
+    `,
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    cursor: 'pointer',
+    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+  },
+  powerButtonHover: {
+    transform: 'scale(1.05)',
+    boxShadow: `
+      inset 0 0 20px #6de0ff,
+      0 0 30px rgba(0, 255, 255, 0.4),
+      0 0 60px rgba(0, 255, 255, 0.4)
+    `,
+  },
+  powerButtonActive: {
+    transform: 'scale(0.95)',
+    boxShadow: `
+      inset 0 0 15px #2ca3d6,
+      0 0 10px rgba(0, 150, 255, 0.5)
+    `,
+  },
+  powerIcon: {
+    fontSize: '3.5rem',
+    color: '#ffffff',
+    textShadow: '0 0 8px #00f0ff, 0 0 16px #00f0ff',
   },
 };
 

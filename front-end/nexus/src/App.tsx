@@ -28,9 +28,10 @@ function App() {
     try {
       const result = await loginToWordPress(username, password);
 
-      const authToken = result.data.login.authtoken;
-      const userId = result.data.login.user.id;
-      const userName = result.data.login.user.name;
+      console.log("Login result:", result);
+      const authToken = result?.data?.login?.authToken;
+      const userId = result?.data?.login?.user?.id;
+      const userName = result?.data?.login?.user?.name;
 
       console.log("Auth Info:", authToken, userId, userName);
 
@@ -41,9 +42,13 @@ function App() {
       localStorage.setItem("userId", userId);
       localStorage.setItem("userName", userName);
       console.log("Login successful. Token and user info saved.");
-      console.log("✅ Logged in as:", userName);
-    } catch (error: any) {
-      alert("❌ " + error.message);
+      console.log("Logged in as:", userName);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("An unknown error occurred during login.");
+      }
     }
   };
 

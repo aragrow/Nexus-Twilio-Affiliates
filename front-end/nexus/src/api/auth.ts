@@ -1,6 +1,8 @@
 // src/api/auth.ts
-export async function loginToWordPress(email: string, password: string) {
-    const response = await fetch("http://localhost:10079/graphql", {
+export async function loginToWordPress(username: string, password: string) {
+  const graphqlEndpoint = import.meta.env.VITE_GRAPHQL_ENDPOINT; // IMPORTANT: Replace with your actual WP GraphQL endpoint
+  
+  const response = await fetch(graphqlEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -10,12 +12,12 @@ export async function loginToWordPress(email: string, password: string) {
           mutation LoginUser {
             login(input: {
               clientMutationId: "uniqueId",
-              username: "affiliate_alfredo.lehner38",
-              password: "A9iG5r7PRuxD3TjckQc(X)rO"
+              username: "${username}",
+              password: "${password}"
             }) {
               authToken
               user {
-                iD
+                id
                 name
               }
             }
