@@ -149,10 +149,8 @@ class Nexus_Installer
         // --- Clients Table ---
         $table_name_clients = $wpdb->prefix . 'nexus_clients';
         $sql_clients = "CREATE TABLE $table_name_clients (
-			ID BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            account_no VARCHAR(20) UNIQUE  NULL, -- Optional account number for client
+            ID BIGINT UNSIGNED DEFAULT NULL,   -- Optional link to wp_users if client logs in
 			affiliate_id BIGINT UNSIGNED NOT NULL,     -- Foreign key to nexus_affiliates table
-            wp_user_id BIGINT UNSIGNED DEFAULT NULL,   -- Optional link to wp_users if client logs in
 			client_name VARCHAR(255) NOT NULL,
 			client_email VARCHAR(255) DEFAULT NULL,
 			client_phone VARCHAR(50) DEFAULT NULL,     -- Phone number associated with the client
@@ -162,41 +160,44 @@ class Nexus_Installer
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			PRIMARY KEY (ID),
 			KEY affiliate_id (affiliate_id),
-            UNIQUE KEY unique_wp_user_id (wp_user_id), -- Allow NULLs but ensure uniqueness if set
-            CONSTRAINT fk_from_affiliate FOREIGN KEY (affiliate_id) REFERENCES $table_name_affiliates(ID) ON DELETE RESTRICT ON UPDATE CASCADE,
+            CONSTRAINT fk_from_clients_affiliates FOREIGN KEY (affiliate_id) REFERENCES $table_name_affiliates(ID) ON DELETE RESTRICT ON UPDATE CASCADE,
             KEY status (status)
             -- Consider adding: CONSTRAINT fk_client_affiliate FOREIGN KEY (affiliate_id) REFERENCES $table_name_affiliates(affiliate_id) ON DELETE CASCADE
             -- Note: dbDelta doesn't support FK constraints well. Manage relationships in code or add constraints manually post-creation if needed.
 		) $charset_collate;";
         dbDelta($sql_clients);
 
+        // --- Entities Table ---
+        $table_name_entities = $wpdb->prefix . 'nexus_entities';
+        $sql_clients = "CREATE TABLE $table_name_entities (
+          ID BIGINT UNSIGNED DEFAULT NULL,   -- Optional link to wp_users if client logs in
+          client_id BIGINT UNSIGNED NOT NULL,     -- Foreign key to nexus_client table
+          entitiy_name VARCHAR(255) NOT NULL,
+          entity_phone VARCHAR(50) DEFAULT NULL,     -- Phone number associated with the client
+          rate_per_minute DECIMAL(10, 4) DEFAULT 0.0000, -- Rate charged TO the client BY the affiliate
+          status VARCHAR(20) NOT NULL DEFAULT 'active', -- e.g., active, inactive
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (ID),
+          KEY client_id (client_id),
+          UNIQUE (entity_phone),
+          CONSTRAINT fk_from_entities_clients FOREIGN KEY (client_id) REFERENCES $table_name_clients(ID) ON DELETE RESTRICT ON UPDATE CASCADE,
+          KEY status (status)
+          -- Consider adding: CONSTRAINT fk_client_affiliate FOREIGN KEY (affiliate_id) REFERENCES $table_name_affiliates(affiliate_id) ON DELETE CASCADE
+          -- Note: dbDelta doesn't support FK constraints well. Manage relationships in code or add constraints manually post-creation if needed.
+      ) $charset_collate;";
+        dbDelta($sql_entities);
+
+
         // --- Twilio Data Table ---
         $table_name_data = $wpdb->prefix . 'nexus_twilio_data';
         $sql_data = "CREATE TABLE $table_name_data (
             ID INT AUTO_INCREMENT PRIMARY KEY,
-            sid VARCHAR(64) NOT NULL,
-            date_created DATETIME,
-            date_updated DATETIME,
-            date_sent DATETIME NOT NULL,
-            account_sid VARCHAR(64),
-            to_phone VARCHAR(20) NOT NULL,
-            from_phone VARCHAR(20) NOT NULL,
-            to_name VARCHAR(255),
-            body TEXT,
-            status VARCHAR(32),
-            num_segments INT,
-            num_media INT,
-            direction VARCHAR(16),
-            api_version VARCHAR(16),
-            price DECIMAL(10,4),
-            price_unit VARCHAR(8),
-            error_code VARCHAR(16),
-            error_message TEXT,
-            uri VARCHAR(255),
-
-            UNIQUE KEY uniq_from_date_sent (from_phone, date_sent),
-            UNIQUE KEY uniq_to_date_sent (to_phone, date_sent),
-            CONSTRAINT fk_from_client FOREIGN KEY (from_phone) REFERENCES $table_name_clients(account_no) ON DELETE RESTRICT ON UPDATE CASCADE
+            charge_date DATETIME
+            charge_to_phone VARCHAR(20) NOT NULL,
+            charge_no_minutes float(10,2) NOT NULL,
+            charge_dollars money(10,2) NOT NULL
+            CONSTRAINT fk_from_data_entity FOREIGN KEY (charge_to_phone) REFERENCES $table_name_entites(entity_phone) ON DELETE RESTRICT ON UPDATE CASCADE
 
 		) $charset_collate;";
         dbDelta($sql_data);

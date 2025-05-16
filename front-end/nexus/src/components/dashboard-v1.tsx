@@ -4,10 +4,6 @@ import styles from "./dashboardStyles"; // Assuming this file exists and is corr
 import AffiliatesTable from "./affiliatesTable"; // Assuming this component exists
 import ClientsTable from "./clientsTable"; // Assuming this component exists
 import AffiliateEditForm from "./affiliateEditForm";
-import { useQuery } from "@apollo/client";
-import { GET_MANAGE_AFFILIATES, GET_MANAGE_CLIENTS } from "./graphqlQueries";
-import client from "./apolloClient"; // Already imported
-import { ApolloProvider } from "@apollo/client";
 
 import {
   PlaceholderIcon,
@@ -23,8 +19,7 @@ import {
   HolderReportsIcon,
   HolderBillingIcon,
 } from "./icons"; // Assuming this file exists and is correctly set up
-
-import type { NavItem } from "./interface"; // Assuming this file exists and is correctly set up
+import type { NavItem, Affiliate } from "./interface"; // Assuming this file exists and is correctly set up
 
 const BackArrowIcon = HolderBackArrowIcon;
 const PowerIcon = HolderPowerIcon;
@@ -45,6 +40,12 @@ const Dashboard: React.FC = () => {
   const [userName, setUserName] = useState<string>("");
   const [isPowerButtonHovered, setIsPowerButtonHovered] = useState(false);
   const [isPowerButtonActive, setIsPowerButtonActive] = useState(false);
+
+  // State for Affiliates Table
+  const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
+  const [isLoadingAffiliates, setIsLoadingAffiliates] =
+    useState<boolean>(false);
+  const [affiliatesError, setAffiliatesError] = useState<string | null>(null);
 
   // --- Navigation and Action Map ---
   const iconMap: { [key: string]: NavItem[] } = {
@@ -93,7 +94,7 @@ const Dashboard: React.FC = () => {
         ariaLabel: "Manage Affiliates",
         action: () => {
           setCurrentLevelKey("manageAffiliatesView"); // Transition to table view state
-          refetchAffiliates(); // Optionally refetch
+          fetchAffiliatesData();
         },
       },
       {
@@ -120,10 +121,7 @@ const Dashboard: React.FC = () => {
         id: "manageClient",
         IconComponent: ManageIcon,
         ariaLabel: "Manage Clients",
-        action: () => {
-          setCurrentLevelKey("manageClientsView"); // Transition to table view state
-          refetchClients(); // Optionally refetch
-        },
+        action: () => console.log("Show Manage Clients Table/UI"),
       },
       // ... other client items
     ],
@@ -170,40 +168,130 @@ const Dashboard: React.FC = () => {
         action: () => console.log("Show Security Settings"),
       },
     ],
-  }; // End iconMap
-
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const {
-    data: affiliatesData,
-    loading: affiliatesLoading,
-    error: affiliatesError,
-    refetch: refetchAffiliates,
-  } = useQuery(GET_MANAGE_AFFILIATES, {
-    skip: currentLevelKey !== "manageAffiliatesView",
-  });
-
-  const {
-    data: clientsData,
-    loading: clientsLoading,
-    error: clientsError,
-    refetch: refetchClients,
-  } = useQuery(GET_MANAGE_CLIENTS, {
-    skip: currentLevelKey !== "manageClientsView",
-  });
+    // No 'manageAffiliatesView' here as it's not a card menu, but a specific view state
+  };
+  const [selectedAffiliateId, setSelectedAffiliateId] = useState<string | null>(
+    null
+  );
 
   const handleEdit = (id: string) => {
-    setSelectedId(id);
+    setSelectedAffiliateId(id);
   };
 
   const handleCloseEdit = () => {
-    setSelectedId(null);
+    setSelectedAffiliateId(null);
   };
 
   useEffect(() => {
     const storedUserName = localStorage.getItem("userName") || "User"; // Default to "User"
     setUserName(storedUserName);
   }, []);
+
+  const fetchAffiliatesData = async () => {
+    setIsLoadingAffiliates(true);
+    setAffiliatesError(null);
+    setAffiliates([]); // Clear previous data
+
+    const query = `
+      query GetManageAffiliates {
+        nexusAffiliates {
+          iD
+          companyName
+          contactName
+        }
+      }
+    `;
+
+    try {
+      const data = await fetchGraphQL<{ nexusAffiliates: Affiliate[] }>(query);
+      setAffiliates(data.nexusAffiliates || []);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setAffiliatesError(error.message);
+      } else {
+        setAffiliatesError("Failed to load affiliates.");
+      }
+    } finally {
+      setIsLoadingAffiliates(false);
+    }
+  };
+
+  const fetchClientsData = async () => {
+    setIsLoadingClients(true);
+    setClientsError(null);
+    setClients([]); // Clear previous data
+
+    const query = `
+      query GetManageClients {
+        nexusClients {
+          clientName
+          clientPhone
+          status
+          affiliateRatePerMinute
+          affiliateId
+          clientEmail
+        }
+    `;
+
+    try {
+      const data = await fetchGraphQL<{ nexusClients: Client[] }>(query);
+      setClients(data.nexusClients || []);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setClientsError(error.message);
+      } else {
+        setClientsError("Failed to load affiliates.");
+      }
+    } finally {
+      setIsLoadingClients(false);
+    }
+  };
+
+  // --- GraphQL Helper (Keep this or replace with your GraphQL client) ---
+  async function fetchGraphQL<T>(
+    query: string,
+    variables?: Record<string, unknown>
+  ): Promise<T> {
+    const graphqlEndpoint = import.meta.env.VITE_GRAPHQL_ENDPOINT;
+
+    try {
+      console.log("AuthToken: ", localStorage.getItem("authToken"));
+      const response = await fetch(graphqlEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(localStorage.getItem("authToken") && {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          }),
+        },
+        body: JSON.stringify({ query, variables }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error("GraphQL request failed:", response.status, errorBody);
+        throw new Error(`Network error: ${response.statusText} - ${errorBody}`);
+      }
+
+      const jsonResponse = await response.json();
+
+      if (jsonResponse.errors && Array.isArray(jsonResponse.errors)) {
+        console.error("GraphQL errors:", jsonResponse.errors);
+
+        const errorMessages = jsonResponse.errors
+          .map((err: { message?: string }) => err.message ?? "Unknown error")
+          .join(", ");
+
+        throw new Error(errorMessages);
+      }
+
+      return jsonResponse.data as T;
+    } catch (error) {
+      console.error("GraphQL request URL:", graphqlEndpoint);
+      console.error("Fetch GraphQL Error:", error);
+      throw error;
+    }
+  }
 
   const handleCardClick = (item: NavItem) => {
     if (item.action) {
@@ -220,7 +308,9 @@ const Dashboard: React.FC = () => {
 
   const handleBack = () => {
     // More sophisticated back navigation might be needed for deeper levels
-    if (iconMap[currentLevelKey] && currentLevelKey !== "root") {
+    if (currentLevelKey === "manageAffiliatesView") {
+      setCurrentLevelKey("Affiliates"); // Go back to the Affiliates menu
+    } else if (iconMap[currentLevelKey] && currentLevelKey !== "root") {
       // Find parent (this is a simple way, assumes direct parentage or root)
       // For a true breadcrumb, you'd need a navigation stack
       let parentKey = "root";
@@ -246,10 +336,13 @@ const Dashboard: React.FC = () => {
 
   const currentNavItems = iconMap[currentLevelKey] || [];
   const isRootLevel = currentLevelKey === "root";
+  const isAffiliatesTableVisible = currentLevelKey === "manageAffiliatesView";
 
   // Determine header title (for screen readers or minimal visual cue if any)
   let headerTitle = "Dashboard";
-  if (!isRootLevel && iconMap[currentLevelKey]) {
+  if (isAffiliatesTableVisible) {
+    headerTitle = "Manage Affiliates";
+  } else if (!isRootLevel && iconMap[currentLevelKey]) {
     // Try to get a conceptual title from the current level key
     // This is a bit of a guess, for better UX, explicitly define titles
     headerTitle = currentLevelKey;
@@ -312,80 +405,70 @@ const Dashboard: React.FC = () => {
             {/* Cast if styles are generic */}
           </div>
         </div>
-        <ApolloProvider client={client}>
+
+        {isAffiliatesTableVisible ? (
           <div style={styles.dashboardMain}>
-            {selectedId && (
+            {selectedAffiliateId ? (
               <AffiliateEditForm
-                affiliateId={selectedId}
+                affiliateId={selectedAffiliateId}
                 onClose={handleCloseEdit}
               />
-            )}
-            {/* Render the table or cards based on current level */}
-            {currentLevelKey == "manageAffiliatesView" ? (
+            ) : (
               <AffiliatesTable
-                affiliates={affiliatesData?.nexusAffiliates || []}
-                isLoading={affiliatesLoading}
-                isError={affiliatesError?.message}
+                affiliates={affiliates}
+                isLoading={isLoadingAffiliates}
+                error={affiliatesError}
                 onEdit={(id) => console.log("Edit affiliate action:", id)}
                 onClients={(id) => console.log("List of clients action:", id)}
               />
-            ) : currentLevelKey == "manageClientsView" ? (
-              <ClientsTable
-                clients={clientsData?.nexusClients || []}
-                isLoading={clientsLoading}
-                isError={clientsError?.message}
-                onEdit={(id) => console.log("Edit client action:", id)}
-                onEntities={(id) => console.log("List of entities action:", id)}
-              />
-            ) : (
-              <>
-                {currentNavItems.map((item: NavItem) => (
-                  <div
-                    key={item.id}
-                    style={styles.dashboardCard}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={item.ariaLabel}
-                    onClick={() => handleCardClick(item)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ")
-                        handleCardClick(item);
-                    }}
-                    // Inline style effects for hover/active (can be moved to CSS classes)
-                    onMouseDown={(e) =>
-                      (e.currentTarget.style.transform =
-                        (styles.dashboardCardActive as React.CSSProperties)
-                          ?.transform || "scale(0.98)")
-                    }
-                    onMouseUp={(e) =>
-                      (e.currentTarget.style.transform =
-                        (styles.dashboardCard as React.CSSProperties)
-                          ?.transform || "scale(1)")
-                    }
-                    onMouseEnter={(e) =>
-                      Object.assign(
-                        e.currentTarget.style,
-                        styles.dashboardCardHover
-                      )
-                    }
-                    onMouseLeave={(e) =>
-                      Object.assign(
-                        e.currentTarget.style,
-                        styles.dashboardCard as React.CSSProperties
-                      )
-                    }
-                  >
-                    <item.IconComponent
-                      style={styles.cardIcon as React.CSSProperties}
-                    />
-                    {/* If you ever need a fallback or small text label:
-                  <span style={styles.cardLabel}>{item.ariaLabel.split(' ')[0]}</span> */}
-                  </div>
-                ))}
-              </>
             )}
           </div>
-        </ApolloProvider>
+        ) : (
+          <div style={styles.dashboardMain}>
+            {currentNavItems.map((item: NavItem) => (
+              <div
+                key={item.id}
+                style={styles.dashboardCard}
+                role="button"
+                tabIndex={0}
+                aria-label={item.ariaLabel}
+                onClick={() => handleCardClick(item)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") handleCardClick(item);
+                }}
+                // Inline style effects for hover/active (can be moved to CSS classes)
+                onMouseDown={(e) =>
+                  (e.currentTarget.style.transform =
+                    (styles.dashboardCardActive as React.CSSProperties)
+                      ?.transform || "scale(0.98)")
+                }
+                onMouseUp={(e) =>
+                  (e.currentTarget.style.transform =
+                    (styles.dashboardCard as React.CSSProperties)?.transform ||
+                    "scale(1)")
+                }
+                onMouseEnter={(e) =>
+                  Object.assign(
+                    e.currentTarget.style,
+                    styles.dashboardCardHover
+                  )
+                }
+                onMouseLeave={(e) =>
+                  Object.assign(
+                    e.currentTarget.style,
+                    styles.dashboardCard as React.CSSProperties
+                  )
+                }
+              >
+                <item.IconComponent
+                  style={styles.cardIcon as React.CSSProperties}
+                />
+                {/* If you ever need a fallback or small text label:
+                <span style={styles.cardLabel}>{item.ariaLabel.split(' ')[0]}</span> */}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

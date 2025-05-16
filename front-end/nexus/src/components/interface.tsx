@@ -16,12 +16,44 @@ interface Affiliate {
   status?: string;
 }
 
+interface Client {
+  iD: string;
+  accountno: string | null;
+  clientName: string | null;
+  clientPhone: string | null;
+  status: string | null;
+  affiliateRatePerMinute: string | null;
+  affiliateId: string | null;
+  clientEmail: string | null;
+}
+
 interface AffiliatesTableProps {
   affiliates: Affiliate[];
   isLoading: boolean;
-  error: string | null;
+  isError: string | null;
   onEdit?: (affiliateId: string) => void; // Optional: for edit action
-  onDelete?: (affiliateId: string) => void; // Optional: for delete action
+  onClients?: (id: string) => void; // 👈 add this
 }
 
-export type { NavItem, Affiliate, AffiliatesTableProps };
+interface ClientsTableProps {
+  clients: Client[];
+  isLoading: boolean;
+  isError: string | null;
+  onEdit?: (affiliateId: string) => void; // Optional: for edit action
+  onEntities?: (id: string) => void; // 👈 add this
+}
+
+interface BackButtonProps {
+  onClick: () => void;
+  label?: string;
+  className?: string;
+}
+
+export type {
+  NavItem,
+  Affiliate,
+  Client,
+  AffiliatesTableProps,
+  ClientsTableProps,
+  BackButtonProps,
+};

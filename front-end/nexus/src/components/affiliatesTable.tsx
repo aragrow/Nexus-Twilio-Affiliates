@@ -8,7 +8,7 @@ const AffiliatesTable: React.FC<AffiliatesTableProps> = ({
   isLoading,
   error,
   onEdit,
-  onDelete,
+  onClients,
 }) => {
   if (isLoading) {
     return <div style={affiliatesStyles.loader}>Loading affiliates...</div>; // Style this loader
@@ -35,7 +35,7 @@ const AffiliatesTable: React.FC<AffiliatesTableProps> = ({
             <th style={affiliatesStyles.tableHeader}>Contact Name</th>
             <th style={affiliatesStyles.tableHeader}>ID</th>
             {/* Add Actions header if you have onEdit/onDelete */}
-            {(onEdit || onDelete) && (
+            {(onEdit || onClients) && (
               <th style={affiliatesStyles.tableHeader}>Actions</th>
             )}
           </tr>
@@ -52,7 +52,7 @@ const AffiliatesTable: React.FC<AffiliatesTableProps> = ({
               <td style={affiliatesStyles.tableCell} data-label="ID:">
                 {affiliate.iD}
               </td>
-              {(onEdit || onDelete) && (
+              {(onEdit || onClients) && (
                 <td style={affiliatesStyles.tableCell} data-label="Actions:">
                   {onEdit && (
                     <button
@@ -65,18 +65,18 @@ const AffiliatesTable: React.FC<AffiliatesTableProps> = ({
                       Edit {/* Replace with Edit Icon */}
                     </button>
                   )}
-                  {onDelete && (
+                  {onClients && (
                     <button
                       style={{
                         ...affiliatesStyles.actionButton,
                         ...affiliatesStyles.deleteButton,
                       }} // Style this
-                      onClick={() => onDelete(affiliate.iD)}
-                      aria-label={`Delete ${
+                      onClick={() => onClients(affiliate.iD)}
+                      aria-label={`Clients ${
                         affiliate.companyName || "affiliate"
                       }`}
                     >
-                      Delete {/* Replace with Delete Icon */}
+                      Clients {/* Replace with Delete Icon */}
                     </button>
                   )}
                 </td>

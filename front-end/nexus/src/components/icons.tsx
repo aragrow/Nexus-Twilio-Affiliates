@@ -70,9 +70,9 @@ const HolderAffiliatesIcon: React.FC<React.SVGProps<SVGSVGElement>> = (
   props
 ) => (
   <svg
-    width="100"
+    width="110"
     height="24"
-    viewBox="0 0 100 24"
+    viewBox="0 0 110 24"
     xmlns="http://www.w3.org/2000/svg"
     {...props}
   >
@@ -83,7 +83,7 @@ const HolderAffiliatesIcon: React.FC<React.SVGProps<SVGSVGElement>> = (
       fontFamily="Segoe UI, Tahoma, Geneva, Verdana, sans-serif"
       fill="currentColor"
     >
-      Affiliate
+      Affiliates
     </text>
   </svg>
 );
@@ -104,6 +104,26 @@ const HolderClientsIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
       fill="currentColor"
     >
       Clients
+    </text>
+  </svg>
+);
+
+const HolderEntitiesIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg
+    width="100"
+    height="24"
+    viewBox="0 0 100 24"
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <text
+      x="0"
+      y="18"
+      fontSize="24"
+      fontFamily="Segoe UI, Tahoma, Geneva, Verdana, sans-serif"
+      fill="currentColor"
+    >
+      Entities
     </text>
   </svg>
 );
@@ -234,6 +254,7 @@ export {
   HolderBackArrowIcon,
   HolderAffiliatesIcon,
   HolderClientsIcon,
+  HolderEntitiesIcon,
   HolderChatIcon,
   HolderSettingsIcon,
   HolderAddIcon,

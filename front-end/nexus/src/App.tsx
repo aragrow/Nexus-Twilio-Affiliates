@@ -1,7 +1,36 @@
 import { useState, useEffect } from "react";
+import {
+  ApolloClient,
+  InMemoryCache,
+  ApolloProvider,
+  createHttpLink,
+} from "@apollo/client";
+import { setContext } from "@apollo/client/link/context";
+
 import Login from "./components/login";
 import Dashboard from "./components/dashboard";
 import { loginToWordPress } from "./api/auth";
+
+const api_uri = import.meta.env.VITE_GRAPHQL_ENDPOINT;
+// --- Apollo Client Setup ---
+const httpLink = createHttpLink({
+  uri: api_uri, // 🔧 Replace with your real URL
+});
+
+const authLink = setContext((_, { headers }) => {
+  const token = localStorage.getItem("authToken");
+  return {
+    headers: {
+      ...headers,
+      authorization: token ? `Bearer ${token}` : "",
+    },
+  };
+});
+
+const client = new ApolloClient({
+  link: authLink.concat(httpLink),
+  cache: new InMemoryCache(),
+});
 
 function App() {
   const [authToken, setToken] = useState<string | null>(null);
@@ -13,27 +42,17 @@ function App() {
     const savedUserId = localStorage.getItem("userId");
     const savedUserName = localStorage.getItem("userName");
 
-    if (savedToken) {
-      setToken(savedToken);
-    }
-    if (savedUserId) {
-      setToken(savedUserId);
-    }
-    if (savedUserName) {
-      setToken(savedUserName);
-    }
+    if (savedToken) setToken(savedToken);
+    if (savedUserId) setUserId(savedUserId); // 🛠 Fixed: used setToken before
+    if (savedUserName) setUserName(savedUserName); // 🛠 Fixed: used setToken before
   }, []);
 
   const handleLogin = async (username: string, password: string) => {
     try {
       const result = await loginToWordPress(username, password);
-
-      console.log("Login result:", result);
       const authToken = result?.data?.login?.authToken;
       const userId = result?.data?.login?.user?.id;
       const userName = result?.data?.login?.user?.name;
-
-      console.log("Auth Info:", authToken, userId, userName);
 
       setToken(authToken);
       setUserId(userId);
@@ -41,8 +60,6 @@ function App() {
       localStorage.setItem("authToken", authToken);
       localStorage.setItem("userId", userId);
       localStorage.setItem("userName", userName);
-      console.log("Login successful. Token and user info saved.");
-      console.log("Logged in as:", userName);
     } catch (error: unknown) {
       if (error instanceof Error) {
         alert(error.message);
@@ -53,7 +70,15 @@ function App() {
   };
 
   return (
-    <div>{authToken ? <Dashboard /> : <Login onLogin={handleLogin} />}</div>
+    <ApolloProvider client={client}>
+      <div>
+        {authToken ? (
+          <Dashboard userId={userId} userName={userName} />
+        ) : (
+          <Login onLogin={handleLogin} />
+        )}
+      </div>
+    </ApolloProvider>
   );
 }
 

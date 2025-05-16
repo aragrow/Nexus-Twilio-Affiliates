@@ -41,6 +41,13 @@ class NexusGraphQLTypeRegistrar
                         return !empty($client_row->ID) ? (int) $client_row->ID : null; // Corrected: Use ID
                     }
                 ],
+                'accountno' => [
+                    'type'        => 'String',
+                    'description' => __('Account number of the client', 'nexus-twilio-affiliates'),
+                    'resolve'     => function ($client_row) {
+                        return !empty($client_row->account_no) ? (string) $client_row->account_no : null;
+                    }
+                ],
                 'affiliateId' => [
                     'type'        => 'Int', // This is the nexus_clients.affiliate_id column
                     'description' => __('The database ID of the affiliate this client belongs to', 'nexus-twilio-affiliates'),
