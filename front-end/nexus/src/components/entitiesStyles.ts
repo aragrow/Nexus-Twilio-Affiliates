@@ -1,6 +1,6 @@
 // In dashboardStyles.ts (add these to your existing styles object)
 // ... existing styles
-const clientsStyles: { [key: string]: React.CSSProperties } = {
+const entitiesStyles: { [key: string]: React.CSSProperties } = {
 tableContainer: {
     width: '100%',
     overflowX: 'auto', // Important for smaller screens if table is wide
@@ -123,4 +123,4 @@ tableContainer: {
   },
 };
 
-export default clientsStyles;
+export default entitiesStyles;

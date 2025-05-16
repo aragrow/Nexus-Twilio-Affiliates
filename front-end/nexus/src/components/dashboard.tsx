@@ -3,9 +3,15 @@ import React, { useState, useEffect } from "react";
 import styles from "./dashboardStyles"; // Assuming this file exists and is correctly set up
 import AffiliatesTable from "./affiliatesTable"; // Assuming this component exists
 import ClientsTable from "./clientsTable"; // Assuming this component exists
+import EntitiesTable from "./entitiesTable"; // Assuming this component exists
 import AffiliateEditForm from "./affiliateEditForm";
-import { useQuery } from "@apollo/client";
-import { GET_MANAGE_AFFILIATES, GET_MANAGE_CLIENTS } from "./graphqlQueries";
+import { gql, useQuery } from "@apollo/client";
+import {
+  GET_MANAGE_AFFILIATES,
+  GET_MANAGE_CLIENTS,
+  GET_CURRENT_USER_STATUS,
+  GET_MANAGE_ENTITIES,
+} from "./graphqlQueries";
 import client from "./apolloClient"; // Already imported
 import { ApolloProvider } from "@apollo/client";
 
@@ -24,7 +30,7 @@ import {
   HolderBillingIcon,
 } from "./icons"; // Assuming this file exists and is correctly set up
 
-import type { NavItem } from "./interface"; // Assuming this file exists and is correctly set up
+import type { DashboardProps, NavItem } from "./interface"; // Assuming this file exists and is correctly set up
 
 const BackArrowIcon = HolderBackArrowIcon;
 const PowerIcon = HolderPowerIcon;
@@ -41,6 +47,21 @@ const BillingIcon = HolderBillingIcon;
 
 // --- Dashboard Component ---
 const Dashboard: React.FC = () => {
+  const { loading, error, data } = useQuery(GET_CURRENT_USER_STATUS, {
+    fetchPolicy: "network-only", // Ensure it always hits the network
+    onError: (apolloError) => {
+      // The global errorLink should handle actual logout/redirect.
+      // This onError is more for component-specific error UI if needed,
+      // but often not necessary if errorLink is robust.
+      console.log(
+        "Dashboard initial auth query error (component level):",
+        apolloError
+      );
+    },
+  });
+
+  const [showContent, setShowContent] = useState(false);
+
   const [currentLevelKey, setCurrentLevelKey] = useState<string>("root");
   const [userName, setUserName] = useState<string>("");
   const [isPowerButtonHovered, setIsPowerButtonHovered] = useState(false);
@@ -138,7 +159,10 @@ const Dashboard: React.FC = () => {
         id: "manageEntity",
         IconComponent: ManageIcon,
         ariaLabel: "Manage Entities",
-        action: () => console.log("Show Manage Entities Table/UI"),
+        action: () => {
+          setCurrentLevelKey("manageEntitiesView"); // Transition to table view state
+          refetchEntities(); // Optionally refetch
+        },
       },
       // ... other client items
     ],
@@ -190,6 +214,15 @@ const Dashboard: React.FC = () => {
     refetch: refetchClients,
   } = useQuery(GET_MANAGE_CLIENTS, {
     skip: currentLevelKey !== "manageClientsView",
+  });
+
+  const {
+    data: entitiesData,
+    loading: entitiesLoading,
+    error: entitiesError,
+    refetch: refetchEntities,
+  } = useQuery(GET_MANAGE_ENTITIES, {
+    skip: currentLevelKey !== "manageEntitiesView",
   });
 
   const handleEdit = (id: string) => {
@@ -327,7 +360,9 @@ const Dashboard: React.FC = () => {
                 isLoading={affiliatesLoading}
                 isError={affiliatesError?.message}
                 onEdit={(id) => console.log("Edit affiliate action:", id)}
-                onClients={(id) => console.log("List of clients action:", id)}
+                onClients={(id) =>
+                  console.log("List of affiliates action:", id)
+                }
               />
             ) : currentLevelKey == "manageClientsView" ? (
               <ClientsTable
@@ -335,7 +370,17 @@ const Dashboard: React.FC = () => {
                 isLoading={clientsLoading}
                 isError={clientsError?.message}
                 onEdit={(id) => console.log("Edit client action:", id)}
-                onEntities={(id) => console.log("List of entities action:", id)}
+                onEntities={(id) => console.log("List of clients action:", id)}
+              />
+            ) : currentLevelKey == "manageEntitiesView" ? (
+              <EntitiesTable
+                entities={entitiesData?.nexusEntities || []}
+                isLoading={entitiesLoading}
+                isError={entitiesError?.message}
+                onEdit={(id) => console.log("Edit entity action:", id)}
+                onBilling={(id: string) =>
+                  console.log("List of entity billing action:", id)
+                }
               />
             ) : (
               <>

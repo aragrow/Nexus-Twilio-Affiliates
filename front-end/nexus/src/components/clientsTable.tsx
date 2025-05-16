@@ -76,9 +76,9 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
                         ...clientsStyles.deleteButton,
                       }} // Style this
                       onClick={() => onEntities(client.iD)}
-                      aria-label={`Clients ${client.clientName || "client"}`}
+                      aria-label={`Entity ${client.clientName || "client"}`}
                     >
-                      Clients {/* Replace with Delete Icon */}
+                      Entities {/* Replace with Delete Icon */}
                     </button>
                   )}
                 </td>

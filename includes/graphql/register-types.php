@@ -28,8 +28,8 @@ class NexusGraphQLTypeRegistrar
 
         $table_name_affiliates = $wpdb->prefix . 'nexus_affiliates';
         $table_name_clients    = $wpdb->prefix . 'nexus_clients'; // Corrected: Removed duplicate/incorrect assignment
-        // $table_name_data    = $wpdb->prefix . 'nexus_twilio_data'; // If needed for other types
-
+        $table_name_entities    = $wpdb->prefix . 'nexus_entities'; // If needed for other types
+        $table_name_twilio_data = $wpdb->prefix . 'nexus_twilio_data';
         // --- Register NexusClient Type ---
         register_graphql_object_type('NexusClient', [
             'description' => __('A client associated with a Nexus Affiliate', 'nexus-twilio-affiliates'),
@@ -223,6 +223,143 @@ class NexusGraphQLTypeRegistrar
             ],
         ]);
 
+        // --- NEW: Register NexusEntity Type ---
+        register_graphql_object_type('NexusEntity', [
+            'description' => __('An entity belonging to a client (e.g., a phone line, service)', 'nexus-twilio-affiliates'),
+            'fields' => [
+                'iD' => [
+                    'type' => 'ID',
+                    'description' => __('The unique ID of the entity', 'nexus-twilio-affiliates'),
+                    'resolve' => fn($row) => !empty($row->ID) ? (int) $row->ID : null,
+                ],
+                'clientId' => [
+                    'type' => 'Int',
+                    'description' => __('The ID of the client this entity belongs to', 'nexus-twilio-affiliates'),
+                    'resolve' => fn($row) => !empty($row->client_id) ? (int) $row->client_id : null,
+                ],
+                'entityType' => [ // Note: 'entity_type' in your DB schema has a typo
+                    'type' => 'String',
+                    'description' => __('Type of the entity', 'nexus-twilio-affiliates'),
+                    'resolve' => fn($row) => $row->entity_type ?? null, // Matching DB schema typo
+                ],
+                'entityName' => [ // Note: 'entity_name' in your DB schema
+                    'type' => 'String',
+                    'description' => __('Name of the entity', 'nexus-twilio-affiliates'),
+                    'resolve' => fn($row) => $row->entity_name ?? null, // Matching DB schema typo
+                ],
+                'entityPhone' => [
+                    'type' => 'String',
+                    'description' => __('Phone number associated with the entity', 'nexus-twilio-affiliates'),
+                    'resolve' => fn($row) => $row->entity_phone ?? null,
+                ],
+                'ratePerMinute' => [
+                    'type' => 'Float',
+                    'description' => __('Rate per minute for this entity', 'nexus-twilio-affiliates'),
+                    'resolve' => fn($row) => isset($row->rate_per_minute) ? (float) $row->rate_per_minute : null,
+                ],
+                'entityStatus' => [
+                    'type' => 'String',
+                    'description' => __('Status of the entity', 'nexus-twilio-affiliates'),
+                    'resolve' => fn($row) => $row->entity_status ?? null,
+                ],
+                'createdAt' => [
+                    'type' => 'String',
+                    'description' => __('Creation date of the entity', 'nexus-twilio-affiliates'),
+                    'resolve' => fn($row) => $row->created_at ?? null,
+                ],
+                'updatedAt' => [
+                    'type' => 'String',
+                    'description' => __('Update date of the entity', 'nexus-twilio-affiliates'),
+                    'resolve' => fn($row) => $row->updated_at ?? null,
+                ],
+                // Connection from Entity back to its Client
+                'client' => [
+                    'type' => 'NexusClient',
+                    'description' => __('The client this entity belongs to', 'nexus-twilio-affiliates'),
+                    'resolve' => function ($entity_row, $args, $context, $info) use ($table_name_clients, $wpdb) {
+                        if (empty($entity_row->client_id)) return null;
+                        return $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name_clients WHERE ID = %d", $entity_row->client_id));
+                    }
+                ],
+                // --- NEW: Connection from Entity to its TwilioData ---
+                'twilioDataEntries' => [
+                    'type' => ['list_of' => 'NexusTwilioData'],
+                    'description' => __('Twilio data entries (charges) for this entity\'s phone number', 'nexus-twilio-affiliates'),
+                    'args' => [ // Optional arguments for filtering TwilioData
+                        'startDate' => ['type' => 'String', 'description' => 'Filter by charge_date on or after this date (YYYY-MM-DD)'],
+                        'endDate'   => ['type' => 'String', 'description' => 'Filter by charge_date on or before this date (YYYY-MM-DD)'],
+                    ],
+                    'resolve' => function ($entity_row, $args, $context, $info) use ($table_name_twilio_data, $wpdb) {
+                        if (empty($entity_row->entity_phone)) return [];
+
+                        $sql = "SELECT * FROM $table_name_twilio_data WHERE charge_to_phone = %s";
+                        $params = [$entity_row->entity_phone];
+
+                        if (!empty($args['startDate'])) {
+                            $sql .= " AND charge_date >= %s";
+                            $params[] = $args['startDate'] . ' 00:00:00'; // Assuming YYYY-MM-DD input
+                        }
+                        if (!empty($args['endDate'])) {
+                            $sql .= " AND charge_date <= %s";
+                            $params[] = $args['endDate'] . ' 23:59:59'; // Assuming YYYY-MM-DD input
+                        }
+                        $sql .= " ORDER BY charge_date DESC"; // Example ordering
+
+                        return $wpdb->get_results($wpdb->prepare($sql, ...$params)) ?: [];
+                    }
+                ]
+            ]
+        ]);
+
+        // --- NEW: Register NexusTwilioData Type ---
+        register_graphql_object_type('NexusTwilioData', [
+            'description' => __('A Twilio data entry, representing a charge or usage record', 'nexus-twilio-affiliates'),
+            'fields' => [
+                'iD' => [
+                    'type' => 'ID',
+                    'description' => __('The unique ID of the Twilio data record', 'nexus-twilio-affiliates'),
+                    'resolve' => fn($row) => !empty($row->ID) ? (int) $row->ID : null,
+                ],
+                'chargeDate' => [
+                    'type' => 'String', // Or a custom GraphQL Date scalar
+                    'description' => __('Date of the charge', 'nexus-twilio-affiliates'),
+                    'resolve' => fn($row) => $row->charge_date ?? null,
+                ],
+                'chargeToPhone' => [
+                    'type' => 'String',
+                    'description' => __('The phone number the charge is associated with', 'nexus-twilio-affiliates'),
+                    'resolve' => fn($row) => $row->charge_to_phone ?? null,
+                ],
+                'chargeNoMinutes' => [
+                    'type' => 'Float', // DB is DECIMAL(10,2)
+                    'description' => __('Number of minutes for the charge', 'nexus-twilio-affiliates'),
+                    'resolve' => fn($row) => isset($row->charge_no_minutes) ? (float) $row->charge_no_minutes : null,
+                ],
+                'chargeDollars' => [
+                    'type' => 'Float', // DB is DECIMAL(10,2)
+                    'description' => __('Charge amount in dollars', 'nexus-twilio-affiliates'),
+                    'resolve' => fn($row) => isset($row->charge_dollars) ? (float) $row->charge_dollars : null,
+                ],
+                'createdAt' => [
+                    'type' => 'String',
+                    'description' => __('Creation date of the record', 'nexus-twilio-affiliates'),
+                    'resolve' => fn($row) => $row->created_at ?? null,
+                ],
+                // Connection from TwilioData back to the Entity (via phone number)
+                'entity' => [
+                    'type' => 'NexusEntity',
+                    'description' => __('The entity associated with this Twilio data entry\'s phone number', 'nexus-twilio-affiliates'),
+                    'resolve' => function ($twilio_data_row, $args, $context, $info) use ($table_name_entities, $wpdb) {
+                        if (empty($twilio_data_row->charge_to_phone)) return null;
+                        return $wpdb->get_row(
+                            $wpdb->prepare("SELECT * FROM $table_name_entities WHERE entity_phone = %s", $twilio_data_row->charge_to_phone)
+                        );
+                    }
+                ]
+            ]
+        ]);
+
+
         // --- Register Root Queries ---
         register_graphql_field('RootQuery', 'nexusAffiliate', [
             'type'        => 'NexusAffiliate',
@@ -325,9 +462,114 @@ class NexusGraphQLTypeRegistrar
             },
         ]);
 
-        // The entire block for register_graphql_field('NexusAffiliates', 'clients', ...)
-        // that was at the end of your original file has been REMOVED as it was redundant
-        // and misplaced. The 'clients' field is correctly defined within the 'NexusAffiliate' type.
+        register_graphql_field('RootQuery', 'nexusEntity', [
+            'type' => 'NexusEntity',
+            'description' => __('Retrieve a single Nexus Entity by ID', 'nexus-twilio-affiliates'),
+            'args' => ['iD' => ['type' => ['non_null' => 'ID']]],
+            'resolve' => function ($root, $args, $context, $info) use ($table_name_entities, $wpdb) {
+                $entity_id = isset($args['iD']) ? absint($args['iD']) : 0;
+                if (empty($entity_id)) return null;
+                return $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name_entities WHERE ID = %d", $entity_id));
+            }
+        ]);
+
+
+        register_graphql_field('RootQuery', 'nexusEntities', [
+            'type' => ['list_of' => 'NexusEntity'],
+            'description' => __('Retrieve a list of Nexus Entities', 'nexus-twilio-affiliates'),
+            'args' => [
+                'first' => ['type' => 'Int', 'defaultValue' => 10],
+                'offset' => ['type' => 'Int', 'defaultValue' => 0],
+                'clientId' => ['type' => 'Int', 'description' => 'Filter by client ID'],
+                'entityType' => ['type' => 'String'],
+                'entityStatus' => ['type' => 'String'],
+                'entityPhone' => ['type' => 'String'],
+            ],
+            'resolve' => function ($root, $args, $context, $info) use ($table_name_entities, $wpdb) {
+                $sql = "SELECT * FROM $table_name_entities";
+                $where_clauses = [];
+                $params = [];
+
+                if (!empty($args['clientId'])) {
+                    $where_clauses[] = "client_id = %d";
+                    $params[] = absint($args['clientId']);
+                }
+                if (!empty($args['entityType'])) {
+                    $where_clauses[] = "entity_type = %s"; // DB typo
+                    $params[] = $args['entityType'];
+                }
+                if (!empty($args['entityStatus'])) {
+                    $where_clauses[] = "entity_status = %s";
+                    $params[] = $args['entityStatus'];
+                }
+                if (!empty($args['entityPhone'])) {
+                    $where_clauses[] = "entity_phone = %s";
+                    $params[] = $args['entityPhone'];
+                }
+
+                if (count($where_clauses) > 0) {
+                    $sql .= " WHERE " . implode(" AND ", $where_clauses);
+                }
+                $sql .= " ORDER BY entity_name ASC LIMIT %d OFFSET %d"; // DB typo
+                $params[] = absint($args['first']);
+                $params[] = absint($args['offset']);
+
+                return $wpdb->get_results($wpdb->prepare($sql, ...$params)) ?: [];
+            }
+        ]);
+
+        // --- NEW: Root Queries for NexusTwilioData ---
+        register_graphql_field('RootQuery', 'nexusTwilioDataEntry', [ // Singular
+            'type' => 'NexusTwilioData',
+            'description' => __('Retrieve a single Nexus Twilio Data entry by ID', 'nexus-twilio-affiliates'),
+            'args' => [
+                'iD' => ['type' => ['non_null' => 'ID']],
+            ],
+            'resolve' => function ($root, $args, $context, $info) use ($table_name_twilio_data, $wpdb) {
+                $data_id = absint($args['iD']);
+                if (empty($data_id)) return null;
+                return $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name_twilio_data WHERE ID = %d", $data_id));
+            }
+        ]);
+
+        register_graphql_field('RootQuery', 'nexusTwilioDataEntries', [ // Plural
+            'type' => ['list_of' => 'NexusTwilioData'],
+            'description' => __('Retrieve a list of Nexus Twilio Data entries', 'nexus-twilio-affiliates'),
+            'args' => [
+                'first' => ['type' => 'Int', 'defaultValue' => 25],
+                'offset' => ['type' => 'Int', 'defaultValue' => 0],
+                'chargeToPhone' => ['type' => 'String', 'description' => 'Filter by the phone number charged'],
+                'startDate' => ['type' => 'String', 'description' => 'Filter by charge_date on or after this date (YYYY-MM-DD)'],
+                'endDate' => ['type' => 'String', 'description' => 'Filter by charge_date on or before this date (YYYY-MM-DD)'],
+            ],
+            'resolve' => function ($root, $args, $context, $info) use ($table_name_twilio_data, $wpdb) {
+                $sql = "SELECT * FROM $table_name_twilio_data";
+                $where_clauses = [];
+                $params = [];
+
+                if (!empty($args['chargeToPhone'])) {
+                    $where_clauses[] = "charge_to_phone = %s";
+                    $params[] = $args['chargeToPhone'];
+                }
+                if (!empty($args['startDate'])) {
+                    $where_clauses[] = "charge_date >= %s";
+                    $params[] = $args['startDate'] . ' 00:00:00';
+                }
+                if (!empty($args['endDate'])) {
+                    $where_clauses[] = "charge_date <= %s";
+                    $params[] = $args['endDate'] . ' 23:59:59';
+                }
+
+                if (count($where_clauses) > 0) {
+                    $sql .= " WHERE " . implode(" AND ", $where_clauses);
+                }
+                $sql .= " ORDER BY charge_date DESC, ID DESC LIMIT %d OFFSET %d";
+                $params[] = absint($args['first']);
+                $params[] = absint($args['offset']);
+
+                return $wpdb->get_results($wpdb->prepare($sql, ...$params)) ?: [];
+            }
+        ]);
     }
 }
 

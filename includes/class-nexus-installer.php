@@ -168,8 +168,8 @@ class Nexus_Installer
         $sql_entities = "CREATE TABLE $table_name_entities (
           ID BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,   -- Optional link to wp_users if client logs in
           client_id BIGINT UNSIGNED NOT NULL,     -- Foreign key to nexus_client table
-          entitiy_type VARCHAR(20) NOT NULL,
-          entitiy_name VARCHAR(255) NOT NULL,
+          entity_type VARCHAR(20) NOT NULL,
+          entity_name VARCHAR(255) NOT NULL,
           entity_phone VARCHAR(50) DEFAULT NULL,     -- Phone number associated with the client
           rate_per_minute DECIMAL(10, 4) DEFAULT 0.0000, -- Rate charged TO the client BY the affiliate
           entity_status VARCHAR(20) NOT NULL DEFAULT 'active', -- e.g., active, inactive

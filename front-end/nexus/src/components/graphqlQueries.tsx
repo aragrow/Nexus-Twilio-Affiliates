@@ -23,3 +23,30 @@ export const GET_MANAGE_CLIENTS = gql`
     }
   }
 `;
+
+export const GET_MANAGE_ENTITIES = gql`
+  query GetManageEntities {
+    nexusEntities {
+      entityType
+      iD
+      ratePerMinute
+      clientId
+      entityName
+      entityPhone
+      entityStatus
+      createdAt
+    }
+  }
+`;
+
+// A simple query to check authentication (e.g., get current user's viewer data)
+export const GET_CURRENT_USER_STATUS = gql`
+  query GetCurrentUserStatus {
+    viewer {
+      # 'viewer' is common in WPGraphQL for the currently authenticated user
+      id
+      name
+      # Add any other small piece of data that confirms auth
+    }
+  }
+`;

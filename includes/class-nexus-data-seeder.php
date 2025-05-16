@@ -163,7 +163,7 @@ class Nexus_Data_Seeder
 
                 $wpdb->query(
                     $wpdb->prepare(
-                        "INSERT INTO `$table_entities` (`client_id`, `entitiy_name`, `entity_type`, `entity_phone`, `rate_per_minute`, `entity_status`, `created_at`, `updated_at`)
+                        "INSERT INTO `$table_entities` (`client_id`, `entity_name`, `entity_type`, `entity_phone`, `rate_per_minute`, `entity_status`, `created_at`, `updated_at`)
                     VALUES (%d, %s, %s, %s, %f, %s, NOW(), NOW());\n",
                         $cli_i,
                         $entity_name,

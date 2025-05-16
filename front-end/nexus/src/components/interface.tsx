@@ -1,4 +1,10 @@
 // --- Interfaces ---
+interface DashboardProps {
+  userId: string | null;
+  userName: string | null;
+  onLogout: () => void;
+}
+
 interface NavItem {
   id: string; // Unique ID for key prop and logic
   IconComponent: React.FC<React.SVGProps<SVGSVGElement>>;
@@ -27,6 +33,18 @@ interface Client {
   clientEmail: string | null;
 }
 
+interface Entity {
+  iD: string;
+  clientId: string | null;
+  entityType: string | null;
+  entitiyName: string | null;
+  entityPhone: string | null;
+  ratePerMinute: string | null;
+  entityStatus: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
 interface AffiliatesTableProps {
   affiliates: Affiliate[];
   isLoading: boolean;
@@ -39,8 +57,16 @@ interface ClientsTableProps {
   clients: Client[];
   isLoading: boolean;
   isError: string | null;
-  onEdit?: (affiliateId: string) => void; // Optional: for edit action
+  onEdit?: (clientId: string) => void; // Optional: for edit action
   onEntities?: (id: string) => void; // 👈 add this
+}
+
+interface EntitiesTableProps {
+  entities: Entity[];
+  isLoading: boolean;
+  isError: string | null;
+  onEdit?: (entityId: string) => void; // Optional: for edit action
+  onBilling?: (id: string) => void; // 👈 add this
 }
 
 interface BackButtonProps {
@@ -50,10 +76,13 @@ interface BackButtonProps {
 }
 
 export type {
+  DashboardProps,
   NavItem,
   Affiliate,
   Client,
+  Entity,
   AffiliatesTableProps,
   ClientsTableProps,
+  EntitiesTableProps,
   BackButtonProps,
 };
