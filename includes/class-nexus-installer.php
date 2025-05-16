@@ -127,21 +127,18 @@ class Nexus_Installer
         // --- Affiliates Table ---
         $table_name_affiliates = $wpdb->prefix . 'nexus_affiliates';
         $sql_affiliates = "CREATE TABLE $table_name_affiliates (
-			ID BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-			wp_user_id BIGINT UNSIGNED NOT NULL,       -- Link to wp_users table
+			ID BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 			company_name VARCHAR(255) DEFAULT NULL,
 			contact_name VARCHAR(255) DEFAULT NULL,
 			contact_email VARCHAR(255) DEFAULT NULL,
 			contact_phone VARCHAR(50) DEFAULT NULL,
-			site_rate_per_minute DECIMAL(10, 4) DEFAULT 0.0000, -- Rate charged TO the affiliate BY the site
+			rate_per_minute DECIMAL(10, 4) DEFAULT 0.0000, -- Rate charged TO the affiliate BY the site
 			-- twilio_account_sid VARCHAR(100) DEFAULT NULL, -- Consider storing sensitive data elsewhere or encrypted
             -- twilio_auth_token VARCHAR(100) DEFAULT NULL, -- AVOID storing raw tokens here!
             twilio_twiml_app_sid VARCHAR(100) DEFAULT NULL, -- Useful for routing calls via Twilio
             status VARCHAR(20) NOT NULL DEFAULT 'pending', -- e.g., pending, active, inactive, suspended
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			PRIMARY KEY (ID),
-            UNIQUE KEY unique_wp_user_id (wp_user_id), -- Ensure one affiliate per WP user
             KEY status (status)
 		) $charset_collate;";
         dbDelta($sql_affiliates);
@@ -149,16 +146,15 @@ class Nexus_Installer
         // --- Clients Table ---
         $table_name_clients = $wpdb->prefix . 'nexus_clients';
         $sql_clients = "CREATE TABLE $table_name_clients (
-            ID BIGINT UNSIGNED DEFAULT NULL,   -- Optional link to wp_users if client logs in
+            ID BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,   -- Optional link to wp_users if client logs in
 			affiliate_id BIGINT UNSIGNED NOT NULL,     -- Foreign key to nexus_affiliates table
 			client_name VARCHAR(255) NOT NULL,
 			client_email VARCHAR(255) DEFAULT NULL,
 			client_phone VARCHAR(50) DEFAULT NULL,     -- Phone number associated with the client
-			affiliate_rate_per_minute DECIMAL(10, 4) DEFAULT 0.0000, -- Rate charged TO the client BY the affiliate
+			rate_per_minute DECIMAL(10, 4) DEFAULT 0.0000, -- Rate charged TO the client BY the affiliate
 			status VARCHAR(20) NOT NULL DEFAULT 'active', -- e.g., active, inactive
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			PRIMARY KEY (ID),
 			KEY affiliate_id (affiliate_id),
             CONSTRAINT fk_from_clients_affiliates FOREIGN KEY (affiliate_id) REFERENCES $table_name_affiliates(ID) ON DELETE RESTRICT ON UPDATE CASCADE,
             KEY status (status)
@@ -169,16 +165,16 @@ class Nexus_Installer
 
         // --- Entities Table ---
         $table_name_entities = $wpdb->prefix . 'nexus_entities';
-        $sql_clients = "CREATE TABLE $table_name_entities (
-          ID BIGINT UNSIGNED DEFAULT NULL,   -- Optional link to wp_users if client logs in
+        $sql_entities = "CREATE TABLE $table_name_entities (
+          ID BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,   -- Optional link to wp_users if client logs in
           client_id BIGINT UNSIGNED NOT NULL,     -- Foreign key to nexus_client table
+          entitiy_type VARCHAR(20) NOT NULL,
           entitiy_name VARCHAR(255) NOT NULL,
           entity_phone VARCHAR(50) DEFAULT NULL,     -- Phone number associated with the client
           rate_per_minute DECIMAL(10, 4) DEFAULT 0.0000, -- Rate charged TO the client BY the affiliate
-          status VARCHAR(20) NOT NULL DEFAULT 'active', -- e.g., active, inactive
+          entity_status VARCHAR(20) NOT NULL DEFAULT 'active', -- e.g., active, inactive
           created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          PRIMARY KEY (ID),
           KEY client_id (client_id),
           UNIQUE (entity_phone),
           CONSTRAINT fk_from_entities_clients FOREIGN KEY (client_id) REFERENCES $table_name_clients(ID) ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -192,14 +188,16 @@ class Nexus_Installer
         // --- Twilio Data Table ---
         $table_name_data = $wpdb->prefix . 'nexus_twilio_data';
         $sql_data = "CREATE TABLE $table_name_data (
-            ID INT AUTO_INCREMENT PRIMARY KEY,
-            charge_date DATETIME
+            ID BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            charge_date DATETIME DEFAULT NULL,                      -- Consider DEFAULT CURRENT_TIMESTAMP if applicable
             charge_to_phone VARCHAR(20) NOT NULL,
-            charge_no_minutes float(10,2) NOT NULL,
-            charge_dollars money(10,2) NOT NULL
-            CONSTRAINT fk_from_data_entity FOREIGN KEY (charge_to_phone) REFERENCES $table_name_entites(entity_phone) ON DELETE RESTRICT ON UPDATE CASCADE
-
-		) $charset_collate;";
+            charge_no_minutes DECIMAL(10, 2) NOT NULL DEFAULT 0.00, -- Corrected: Using DECIMAL for precision
+            charge_dollars DECIMAL(10, 2) NOT NULL DEFAULT 0.00,    -- Corrected: Using DECIMAL for currency
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (ID),
+            KEY idx_charge_to_phone (charge_to_phone),              -- Indexing the column used in FK for performance
+            CONSTRAINT fk_data_to_entity_phone FOREIGN KEY (charge_to_phone) REFERENCES wp_nexus_entities(entity_phone) ON DELETE RESTRICT ON UPDATE CASCADE
+ 	    ) $charset_collate;";
         dbDelta($sql_data);
 
         // --- Potential Future Tables ---

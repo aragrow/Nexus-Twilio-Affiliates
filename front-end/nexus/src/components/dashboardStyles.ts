@@ -106,7 +106,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     height: '75vh',
   },
   dashboardCard: {
-    background: 'linear-gradient(135deg, #c2c2c2, #f1f2f6)',
+    background: 'linear-gradient(135deg, rgba(194, 194, 194, 0.5), rgba(241, 242, 246, 0.5))',
     border: '2px solid #bdc3c7',
     borderRadius: '16px',
     padding: '2rem',
@@ -128,8 +128,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     transform: 'translateY(-6px) scale(1.05)',
     boxShadow: '0 12px 30px rgba(0, 0, 0, 0.2)',
     borderColor: '#3498db',
-    color: '#3498db',
-    background: 'linear-gradient(135deg, #ecf0f1, #d0d3d4)',
+    color: '#000000',
+    background: 'linear-gradient(135deg, rgba(236, 240, 241, 0.1), rgba(208, 211, 212, 0.1))',
   },
   dashboardCardActive: {
     transform: 'scale(0.97)',
