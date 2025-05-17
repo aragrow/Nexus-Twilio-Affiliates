@@ -31,18 +31,30 @@ interface Client {
   affiliateRatePerMinute: string | null;
   affiliateId: string | null;
   clientEmail: string | null;
+  affiliate?: Affiliate; // The resolved client object (optional if not always fetched)
 }
 
 interface Entity {
   iD: string;
   clientId: string | null;
   entityType: string | null;
-  entitiyName: string | null;
+  entityName: string | null;
   entityPhone: string | null;
   ratePerMinute: string | null;
   entityStatus: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+  client?: Client; // The resolved client object (optional if not always fetched)
+}
+
+interface WorkFlow {
+  iD: string;
+  clientId: string | null;
+  workFlowName: string | null;
+  workFlowStatus: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  client?: Client; // The resolved client object (optional if not always fetched)
 }
 
 interface WorkFlowItem extends Entity {
@@ -76,6 +88,13 @@ interface EntitiesTableProps {
   onBilling?: (id: string) => void; // 👈 add this
 }
 
+interface WorkFlowsTableProps {
+  workFlows: WorkFlow[];
+  isLoading: boolean;
+  isError: string | null;
+  onEdit?: (workFlowsId: string) => void; // Optional: for edit action
+}
+
 interface BackButtonProps {
   onClick: () => void;
   label?: string;
@@ -88,9 +107,11 @@ export type {
   Affiliate,
   Client,
   Entity,
+  WorkFlow,
   WorkFlowItem,
   AffiliatesTableProps,
   ClientsTableProps,
   EntitiesTableProps,
+  WorkFlowsTableProps,
   BackButtonProps,
 };

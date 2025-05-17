@@ -4,10 +4,10 @@ const clientsStyles: { [key: string]: React.CSSProperties } = {
 tableContainer: {
     width: '100%',
     overflowX: 'auto', // Important for smaller screens if table is wide
-    margin: '20px 0',
+    margin: '0 0',
     backgroundColor: 'rgba(255, 255, 255, 0.05)', // Dark theme table bg
     borderRadius: '8px',
-    padding: '10px',
+    padding: '1px',
   },
   table: {
     width: '100%',
@@ -18,7 +18,7 @@ tableContainer: {
     backgroundColor: 'rgba(0, 174, 255, 0.2)', // Using your UI primary accent
   },
   tableHeader: {
-    padding: '12px 15px',
+    padding: '10px 5px',
     textAlign: 'left',
     fontWeight: 'bold',
     borderBottom: '2px solid var(--ui-primary-accent, #00aeff)',
@@ -120,6 +120,50 @@ tableContainer: {
     color: "#fff",
     fontWeight: 500,
     backdropFilter: "blur(4px)",
+  },
+  paginationContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: '20px 0',
+    userSelect: 'none', // Prevents text selection on rapid clicks
+  },
+  paginationButton: {
+    background: 'var(--ui-element-bg, #2c303a)', // Use your theme variables
+    color: 'var(--ui-text-color-light, #e0e0e0)',
+    border: '1px solid var(--ui-primary-accent, #00aeff)',
+    padding: '8px 12px',
+    margin: '0 4px',
+    borderRadius: 'var(--ui-border-radius-sm, 4px)',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s, color 0.2s',
+    '&:hover:not(:disabled)': {
+      backgroundColor: 'var(--ui-primary-accent, #00aeff)',
+      color: 'var(--ui-bg-color, #1a1d24)',
+    },
+    '&:disabled': {
+      opacity: 0.5,
+      cursor: 'not-allowed',
+    },
+  },
+  paginationButtonActive: {
+    backgroundColor: 'var(--ui-primary-accent, #00aeff)',
+    color: 'var(--ui-bg-color, #1a1d24)',
+    fontWeight: 'bold',
+    borderColor: 'var(--ui-primary-accent, #00aeff)',
+  },
+  paginationEllipsis: {
+    margin: '0 8px',
+    color: 'var(--ui-text-color-light, #e0e0e0)',
+  },
+  paginationInfo: {
+    marginLeft: '15px',
+    color: 'var(--ui-text-color-light, #e0e0e0)',
+    fontSize: '0.9em',
+  },
+  clientsButton: { // Example style for the Clients button
+      // Add specific styles or inherit from actionButton and override
+      // backgroundColor: 'var(--ui-secondary-accent, #7e57c2)', // Example
   },
 };
 

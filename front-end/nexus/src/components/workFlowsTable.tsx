@@ -1,41 +1,40 @@
-// entitiesTable.tsx
+// workFlowsTable.tsx
 import React, { useState, useMemo } from "react";
-import entitiesStyles from "./entitiesStyles"; // Assuming table styles are in dashboardStyles
-import type { EntitiesTableProps } from "./interface"; // Importing the entity interface
+import workFlowsStyles from "./workFlowsStyles"; // Assuming table styles are in dashboardStyles
+import type { workFlowsTableProps } from "./interface"; // Importing the client interface
 
 const ITEMS_PER_PAGE = 15; // Or make this a prop if you want it configurable
 
-const EntitiesTable: React.FC<EntitiesTableProps> = ({
-  entities,
+const workFlowsTable: React.FC<workFlowsTableProps> = ({
+  workFlows,
   isLoading,
   isError,
   onEdit,
-  onBilling,
 }) => {
   if (isLoading) {
-    return <div style={entitiesStyles.loader}>Loading entities...</div>; // Style this loader
+    return <div style={workFlowsStyles.loader}>Loading workFlows...</div>; // Style this loader
   }
 
   if (isError) {
-    return <div style={entitiesStyles.errorMessage}>{isError}</div>; // Style this error message
+    return <div style={workFlowsStyles.errorMessage}>{isError}</div>; // Style this error message
   }
 
-  if (!entities || entities.length === 0) {
-    return <div style={entitiesStyles.noDataMessage}>No entities found.</div>; // Style this
+  if (!workFlows || workFlows.length === 0) {
+    return <div style={workFlowsStyles.noDataMessage}>No workFlows found.</div>; // Style this
   }
 
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Memoize the paginated entities to avoid re-calculating on every render
-  // unless entities or currentPage changes.
-  const paginatedEntities = useMemo(() => {
-    if (!entities) return [];
+  // Memoize the paginated workFlows to avoid re-calculating on every render
+  // unless workFlows or currentPage changes.
+  const paginatedworkFlows = useMemo(() => {
+    if (!workFlows) return [];
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
-    return entities.slice(startIndex, endIndex);
-  }, [entities, currentPage]);
+    return workFlows.slice(startIndex, endIndex);
+  }, [workFlows, currentPage]);
 
-  const totalPages = Math.ceil(entities.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(workFlows.length / ITEMS_PER_PAGE);
 
   const handleNextPage = () => {
     setCurrentPage((prevPage) => Math.min(prevPage + 1, totalPages));
@@ -83,62 +82,52 @@ const EntitiesTable: React.FC<EntitiesTableProps> = ({
 
   return (
     <>
-      <div style={entitiesStyles.tableContainer}>
+      <div style={workFlowsStyles.tableContainer}>
         {" "}
         {/* Main container for responsiveness */}
-        <table style={entitiesStyles.table}>
-          <thead style={entitiesStyles.tableHead}>
+        <table style={workFlowsStyles.table}>
+          <thead style={workFlowsStyles.tableHead}>
             <tr>
-              <th style={entitiesStyles.tableHeader}>Entity Type</th>
-              <th style={entitiesStyles.tableHeader}>Entity Name</th>
-              <th style={entitiesStyles.tableHeader}>Entity Phone</th>
-              <th style={entitiesStyles.tableHeader}>Entity Status</th>
-              <th style={entitiesStyles.tableHeader}>ID</th>
+              <th style={workFlowsStyles.tableHeader}>Client Name</th>
+              <th style={workFlowsStyles.tableHeader}>workFlow Name</th>
+              <th style={workFlowsStyles.tableHeader}>workFlow Status</th>
+              <th style={workFlowsStyles.tableHeader}>ID</th>
               {/* Add Actions header if you have onEdit/onDelete */}
-              {(onEdit || onBilling) && (
-                <th style={entitiesStyles.tableHeader}>Actions</th>
-              )}
+              {onEdit && <th style={workFlowsStyles.tableHeader}>Actions</th>}
             </tr>
           </thead>
-          <tbody style={entitiesStyles.tableBody}>
-            {paginatedEntities.map((entity) => (
-              <tr key={entity.iD} style={entitiesStyles.tableRow}>
-                <td style={entitiesStyles.tableCell} data-label="entity TYPE:">
-                  {entity.entityType || "N/A"}
+          <tbody style={workFlowsStyles.tableBody}>
+            {paginatedworkFlows.map((workFlow) => (
+              <tr key={workFlow.iD} style={workFlowsStyles.tableRow}>
+                <td
+                  style={workFlowsStyles.tableCell}
+                  data-label="workFlow Client Name:"
+                >
+                  {workFlow.client?.clientName || "N/A"}
                 </td>
-                <td style={entitiesStyles.tableCell} data-label="entity Name:">
-                  {entity.entityName || "N/A"}
+                <td
+                  style={workFlowsStyles.tableCell}
+                  data-label="workFlow Name:"
+                >
+                  {workFlow.workFlowName || "N/A"}
                 </td>
-                <td style={entitiesStyles.tableCell} data-label="entity Phone:">
-                  {entity.entityPhone || "N/A"}
+                <td style={workFlowsStyles.tableCell} data-label="Status:">
+                  {workFlow.workFlowStatus}
                 </td>
-                <td style={entitiesStyles.tableCell} data-label="Status:">
-                  {entity.entityStatus}
+                <td style={workFlowsStyles.tableCell} data-label="ID:">
+                  {workFlow.iD}
                 </td>
-                <td style={entitiesStyles.tableCell} data-label="ID:">
-                  {entity.iD}
-                </td>
-                {(onEdit || onBilling) && (
-                  <td style={entitiesStyles.tableCell} data-label="Actions:">
+                {onEdit && (
+                  <td style={workFlowsStyles.tableCell} data-label="Actions:">
                     {onEdit && (
                       <button
-                        style={entitiesStyles.actionButton} // Style this button
-                        onClick={() => onEdit(entity.iD)}
-                        aria-label={`Edit ${entity.entityName || "entity"}`}
+                        style={workFlowsStyles.actionButton} // Style this button
+                        onClick={() => onEdit(workFlow.iD)}
+                        aria-label={`Edit ${
+                          workFlow.workFlowName || "workFlow"
+                        }`}
                       >
                         Edit {/* Replace with Edit Icon */}
-                      </button>
-                    )}
-                    {onBilling && (
-                      <button
-                        style={{
-                          ...entitiesStyles.actionButton,
-                          ...entitiesStyles.deleteButton,
-                        }} // Style this
-                        onClick={() => onBilling(entity.iD)}
-                        aria-label={`Entity ${entity.entityName || "entity"}`}
-                      >
-                        Billing {/* Replace with Delete Icon */}
                       </button>
                     )}
                   </td>
@@ -150,9 +139,9 @@ const EntitiesTable: React.FC<EntitiesTableProps> = ({
       </div>
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div style={entitiesStyles.paginationContainer}>
+        <div style={workFlowsStyles.paginationContainer}>
           <button
-            style={entitiesStyles.paginationButton}
+            style={workFlowsStyles.paginationButton}
             onClick={handlePreviousPage}
             disabled={currentPage === 1}
             aria-label="Go to previous page"
@@ -164,14 +153,14 @@ const EntitiesTable: React.FC<EntitiesTableProps> = ({
           {pageNumbersToDisplay[0] > 1 && (
             <>
               <button
-                style={entitiesStyles.paginationButton}
+                style={workFlowsStyles.paginationButton}
                 onClick={() => handleGoToPage(1)}
                 aria-label="Go to page 1"
               >
                 1
               </button>
               {pageNumbersToDisplay[0] > 2 && (
-                <span style={entitiesStyles.paginationEllipsis}>...</span>
+                <span style={workFlowsStyles.paginationEllipsis}>...</span>
               )}
             </>
           )}
@@ -180,9 +169,9 @@ const EntitiesTable: React.FC<EntitiesTableProps> = ({
             <button
               key={pageNumber}
               style={{
-                ...entitiesStyles.paginationButton,
+                ...workFlowsStyles.paginationButton,
                 ...(currentPage === pageNumber
-                  ? entitiesStyles.paginationButtonActive
+                  ? workFlowsStyles.paginationButtonActive
                   : {}),
               }}
               onClick={() => handleGoToPage(pageNumber)}
@@ -198,10 +187,10 @@ const EntitiesTable: React.FC<EntitiesTableProps> = ({
             <>
               {pageNumbersToDisplay[pageNumbersToDisplay.length - 1] <
                 totalPages - 1 && (
-                <span style={entitiesStyles.paginationEllipsis}>...</span>
+                <span style={workFlowsStyles.paginationEllipsis}>...</span>
               )}
               <button
-                style={entitiesStyles.paginationButton}
+                style={workFlowsStyles.paginationButton}
                 onClick={() => handleGoToPage(totalPages)}
                 aria-label={`Go to page ${totalPages}`}
               >
@@ -211,14 +200,14 @@ const EntitiesTable: React.FC<EntitiesTableProps> = ({
           )}
 
           <button
-            style={entitiesStyles.paginationButton}
+            style={workFlowsStyles.paginationButton}
             onClick={handleNextPage}
             disabled={currentPage === totalPages}
             aria-label="Go to next page"
           >
             » {/* Next Icon/Text */}
           </button>
-          <span style={entitiesStyles.paginationInfo}>
+          <span style={workFlowsStyles.paginationInfo}>
             Page {currentPage} of {totalPages}
           </span>
         </div>
@@ -227,4 +216,4 @@ const EntitiesTable: React.FC<EntitiesTableProps> = ({
   );
 };
 
-export default EntitiesTable;
+export default workFlowsTable;

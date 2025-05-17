@@ -1,16 +1,7 @@
 // In your React component (e.g., WorkFlowBuilder.tsx)
 
 import React, { useState, useEffect } from "react";
-import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  OnDragEndResponder, // Type for onDragEnd
-  DropResult, // Type for the result of a drag
-  DroppableProvided,
-  DraggableProvided,
-  DraggableStateSnapshot,
-} from "@hello-pangea/dnd"; // Updated import
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"; // Updated import
 
 import type { WorkFlowItem } from "./interface";
 

@@ -4,14 +4,15 @@ import styles from "./dashboardStyles"; // Assuming this file exists and is corr
 import AffiliatesTable from "./affiliatesTable"; // Assuming this component exists
 import ClientsTable from "./clientsTable"; // Assuming this component exists
 import EntitiesTable from "./entitiesTable"; // Assuming this component exists
-import WorkFlowBuilder from "./workFlowBuilder";
+import WorkFlowsTable from "./workFlowsTable";
 import AffiliateEditForm from "./affiliateEditForm";
-import { gql, useQuery } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import {
   GET_MANAGE_AFFILIATES,
   GET_MANAGE_CLIENTS,
   GET_CURRENT_USER_STATUS,
   GET_MANAGE_ENTITIES,
+  GET_MANAGE_WORKFLOWS,
 } from "./graphqlQueries";
 import client from "./apolloClient"; // Already imported
 import { ApolloProvider } from "@apollo/client";
@@ -32,7 +33,7 @@ import {
   HolderBillingIcon,
 } from "./icons"; // Assuming this file exists and is correctly set up
 
-import type { DashboardProps, NavItem } from "./interface"; // Assuming this file exists and is correctly set up
+import type { NavItem } from "./interface"; // Assuming this file exists and is correctly set up
 
 const BackArrowIcon = HolderBackArrowIcon;
 const PowerIcon = HolderPowerIcon;
@@ -60,10 +61,12 @@ const Dashboard: React.FC = () => {
         "Dashboard initial auth query error (component level):",
         apolloError
       );
+
+      console.log(loading);
+      console.log(error);
+      console.log(data);
     },
   });
-
-  const [showContent, setShowContent] = useState(false);
 
   const [currentLevelKey, setCurrentLevelKey] = useState<string>("root");
   const [userName, setUserName] = useState<string>("");
@@ -154,8 +157,8 @@ const Dashboard: React.FC = () => {
         IconComponent: WorkFlowIcon,
         ariaLabel: "Manage WorkFlows",
         action: () => {
-          setCurrentLevelKey("manageWorkflowsView"); // Transition to table view state
-          refetchWorkflows(); // Optionally refetch
+          setCurrentLevelKey("manageWorkFlowsView"); // Transition to table view state
+          refetchWorkFlows(); // Optionally refetch
         },
       },
       // ... other client items
@@ -240,16 +243,17 @@ const Dashboard: React.FC = () => {
   const {
     data: workFlowsData,
     loading: workFlowsLoading,
-    error: workFlowError,
+    error: workFlowsError,
     refetch: refetchWorkFlows,
   } = useQuery(GET_MANAGE_WORKFLOWS, {
     skip: currentLevelKey !== "manageWorkFlowsView",
   });
 
+  /*
   const handleEdit = (id: string) => {
     setSelectedId(id);
   };
-
+*/
   const handleCloseEdit = () => {
     setSelectedId(null);
   };
@@ -402,6 +406,13 @@ const Dashboard: React.FC = () => {
                 onBilling={(id: string) =>
                   console.log("List of entity billing action:", id)
                 }
+              />
+            ) : currentLevelKey == "manageWorkFlowsView" ? (
+              <WorkFlowsTable
+                workFlows={workFlowsData?.nexusWorkFlows || []}
+                isLoading={workFlowsLoading}
+                isError={workFlowsError?.message}
+                onEdit={(id) => console.log("Edit workFlow action:", id)}
               />
             ) : (
               <>

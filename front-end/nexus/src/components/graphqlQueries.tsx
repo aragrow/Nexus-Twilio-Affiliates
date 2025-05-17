@@ -20,6 +20,9 @@ export const GET_MANAGE_CLIENTS = gql`
       affiliateRatePerMinute
       affiliateId
       clientEmail
+      affiliate {
+        companyName
+      }
     }
   }
 `;
@@ -35,6 +38,24 @@ export const GET_MANAGE_ENTITIES = gql`
       entityPhone
       entityStatus
       createdAt
+      client {
+        clientName
+      }
+    }
+  }
+`;
+
+export const GET_MANAGE_WORKFLOWS = gql`
+  query GetManageWorkFlows {
+    nexusWorkFlows {
+      iD
+      clientId
+      workFlowName
+      workFlowStatus
+      createdAt
+      client {
+        clientName
+      }
     }
   }
 `;

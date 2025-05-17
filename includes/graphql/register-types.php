@@ -362,8 +362,8 @@ class NexusGraphQLTypeRegistrar
             ]
         ]);
 
-        // --- Register NexusWorkflowStep (represents an entry in nexus_workflow_entities) ---
-        register_graphql_object_type('NexusWorkflowStep', [
+        // --- Register nexusWorkFlowStep (represents an entry in nexus_workflow_entities) ---
+        register_graphql_object_type('nexusWorkFlowStep', [
             'description' => __('An entity step within a Nexus Workflow', 'nexus-twilio-affiliates'),
             'fields'      => [
                 'iD' => [ // ID of the nexus_workflow_entities row
@@ -403,7 +403,7 @@ class NexusGraphQLTypeRegistrar
                 ],
                 // Connection back to the parent Workflow
                 'workflow' => [
-                    'type' => 'NexusWorkflow',
+                    'type' => 'nexusWorkFlow',
                     'description' => __('The parent workflow this step belongs to', 'nexus-twilio-affiliates'),
                     'resolve' => function ($workflow_step_row) use ($table_name_workflows, $wpdb) {
                         if (empty($workflow_step_row->workflow_id)) return null;
@@ -415,8 +415,8 @@ class NexusGraphQLTypeRegistrar
             ],
         ]);
 
-        // --- Register NexusWorkflow Type ---
-        register_graphql_object_type('NexusWorkflow', [
+        // --- Register nexusWorkFlow Type ---
+        register_graphql_object_type('nexusWorkFlow', [
             'description' => __('A Nexus Workflow definition', 'nexus-twilio-affiliates'),
             'fields'      => [
                 'iD' => [
@@ -428,11 +428,11 @@ class NexusGraphQLTypeRegistrar
                     'description' => __('ID of the client this workflow belongs to', 'nexus-twilio-affiliates'),
                     'resolve'     => fn($row) => !empty($row->client_id) ? (int) $row->client_id : null,
                 ],
-                'workflowName' => [
+                'workFlowName' => [
                     'type'        => 'String',
                     'resolve'     => fn($row) => $row->workflow_name ?? null,
                 ],
-                'workflowStatus' => [
+                'workFlowStatus' => [
                     'type'        => 'String',
                     'resolve'     => fn($row) => $row->workflow_status ?? null,
                 ],
@@ -457,7 +457,7 @@ class NexusGraphQLTypeRegistrar
                 ],
                 // Connection to its steps (ordered)
                 'steps' => [
-                    'type' => ['list_of' => 'NexusWorkflowStep'],
+                    'type' => ['list_of' => 'nexusWorkFlowStep'],
                     'description' => __('The ordered steps (entities) in this workflow', 'nexus-twilio-affiliates'),
                     'resolve' => function ($workflow_row) use ($table_name_workflow_entities, $wpdb) {
                         if (empty($workflow_row->ID)) return [];
@@ -496,7 +496,7 @@ class NexusGraphQLTypeRegistrar
             'type'        => ['list_of' => 'NexusAffiliate'],
             'description' => __('Retrieve a list of Nexus Affiliates', 'nexus-twilio-affiliates'),
             'args'        => [
-                'first' => ['type' => 'Int', 'defaultValue' => 10],
+                'first' => ['type' => 'Int', 'defaultValue' => 100],
                 'offset' => ['type' => 'Int', 'defaultValue' => 0],
                 'status' => ['type' => 'String'],
                 'wpUserId' => ['type' => 'Int'] // Allow filtering by wpUserId
@@ -542,7 +542,7 @@ class NexusGraphQLTypeRegistrar
             'type'        => ['list_of' => 'NexusClient'],
             'description' => __('Retrieve a list of Nexus Clients', 'nexus-twilio-affiliates'),
             'args'        => [
-                'first' => ['type' => 'Int', 'defaultValue' => 10],
+                'first' => ['type' => 'Int', 'defaultValue' => 100],
                 'offset' => ['type' => 'Int', 'defaultValue' => 0],
                 'status' => ['type' => 'String'],
                 'affiliateId' => ['type' => 'Int'], // Filter by parent affiliate ID
@@ -590,7 +590,7 @@ class NexusGraphQLTypeRegistrar
             'type' => ['list_of' => 'NexusEntity'],
             'description' => __('Retrieve a list of Nexus Entities', 'nexus-twilio-affiliates'),
             'args' => [
-                'first' => ['type' => 'Int', 'defaultValue' => 10],
+                'first' => ['type' => 'Int', 'defaultValue' => 100],
                 'offset' => ['type' => 'Int', 'defaultValue' => 0],
                 'clientId' => ['type' => 'Int', 'description' => 'Filter by client ID'],
                 'entityType' => ['type' => 'String'],
@@ -684,8 +684,8 @@ class NexusGraphQLTypeRegistrar
         ]);
 
         // --- Root Queries for Workflows ---
-        register_graphql_field('RootQuery', 'nexusWorkflow', [
-            'type'        => 'NexusWorkflow',
+        register_graphql_field('RootQuery', 'nexusWorkFlow', [
+            'type'        => 'nexusWorkFlow',
             'description' => __('Retrieve a single Nexus Workflow by ID', 'nexus-twilio-affiliates'),
             'args'        => [
                 'iD' => ['type' => ['non_null' => 'ID']],
@@ -697,27 +697,32 @@ class NexusGraphQLTypeRegistrar
             },
         ]);
 
-        register_graphql_field('RootQuery', 'nexusWorkflows', [
-            'type'        => ['list_of' => 'NexusWorkflow'],
+        register_graphql_field('RootQuery', 'nexusWorkFlows', [
+            'type'        => ['list_of' => 'nexusWorkFlow'],
             'description' => __('Retrieve a list of Nexus Workflows', 'nexus-twilio-affiliates'),
             'args'        => [
-                'first' => ['type' => 'Int', 'defaultValue' => 10],
+                'first' => ['type' => 'Int', 'defaultValue' => 100],
                 'offset' => ['type' => 'Int', 'defaultValue' => 0],
                 'clientId' => ['type' => 'Int'],
-                'workflowStatus' => ['type' => 'String'],
+                'workFlowName' => ['type' => 'String'],
+                'workFlowStatus' => ['type' => 'String']
             ],
-            'resolve'     => function ($root, $args) use ($table_name_workflows, $wpdb) {
+            'resolve'     => function ($root, $args) use ($table_name_workflows, $table_name_clients, $wpdb) {
                 $sql = "SELECT * FROM $table_name_workflows";
                 $where_clauses = [];
                 $params = [];
 
                 if (!empty($args['clientId'])) {
-                    $where_clauses[] = "client_id = %d";
+                    $where_clauses[] = "a.client_id = %d";
                     $params[] = absint($args['clientId']);
                 }
-                if (!empty($args['workflowStatus'])) {
-                    $where_clauses[] = "workflow_status = %s";
-                    $params[] = sanitize_text_field($args['workflowStatus']);
+                if (!empty($args['workFlowName'])) {
+                    $where_clauses[] = "a.workflow_name = %s";
+                    $params[] = sanitize_text_field($args['workFlowName']);
+                }
+                if (!empty($args['workFlowStatus'])) {
+                    $where_clauses[] = "a.workflow_status = %s";
+                    $params[] = sanitize_text_field($args['workFlowStatus']);
                 }
 
                 if (count($where_clauses) > 0) {
@@ -732,10 +737,10 @@ class NexusGraphQLTypeRegistrar
         ]);
 
         // --- Root Queries for Workflow Steps (Optional, usually accessed via Workflow.steps) ---
-        // You might not need direct root queries for NexusWorkflowStep if they are always fetched
-        // in the context of a parent NexusWorkflow. But if needed:
-        register_graphql_field('RootQuery', 'nexusWorkflowStep', [
-            'type'        => 'NexusWorkflowStep',
+        // You might not need direct root queries for nexusWorkFlowStep if they are always fetched
+        // in the context of a parent nexusWorkFlow. But if needed:
+        register_graphql_field('RootQuery', 'nexusWorkFlowStep', [
+            'type'        => 'nexusWorkFlowStep',
             'description' => __('Retrieve a single Nexus Workflow Step by its own ID', 'nexus-twilio-affiliates'),
             'args'        => [
                 'iD' => ['type' => ['non_null' => 'ID']], // ID from nexus_workflow_entities table
@@ -743,7 +748,7 @@ class NexusGraphQLTypeRegistrar
             'resolve'     => function ($root, $args) use ($table_name_workflow_entities, $wpdb) {
                 $step_id = absint($args['iD']);
                 if (empty($step_id)) return null;
-                return $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name_workflow_entities WHERE ID = %d", $step_id));
+                return $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name_workflow_entities ID = %d", $step_id));
             },
         ]);
     }
