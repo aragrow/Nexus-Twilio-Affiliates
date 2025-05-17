@@ -45,6 +45,13 @@ interface Entity {
   updatedAt: string | null;
 }
 
+interface WorkFlowItem extends Entity {
+  wiD: string;
+  workFlowName: string | null;
+  workFlowOrder: string | null;
+  // You might add workflow-specific properties here if needed in the future
+}
+
 interface AffiliatesTableProps {
   affiliates: Affiliate[];
   isLoading: boolean;
@@ -81,6 +88,7 @@ export type {
   Affiliate,
   Client,
   Entity,
+  WorkFlowItem,
   AffiliatesTableProps,
   ClientsTableProps,
   EntitiesTableProps,

@@ -4,6 +4,7 @@ import styles from "./dashboardStyles"; // Assuming this file exists and is corr
 import AffiliatesTable from "./affiliatesTable"; // Assuming this component exists
 import ClientsTable from "./clientsTable"; // Assuming this component exists
 import EntitiesTable from "./entitiesTable"; // Assuming this component exists
+import WorkFlowBuilder from "./workFlowBuilder";
 import AffiliateEditForm from "./affiliateEditForm";
 import { gql, useQuery } from "@apollo/client";
 import {
@@ -26,6 +27,7 @@ import {
   HolderSettingsIcon,
   HolderAddIcon,
   HolderManageIcon,
+  HolderWorkFlowIcon,
   HolderReportsIcon,
   HolderBillingIcon,
 } from "./icons"; // Assuming this file exists and is correctly set up
@@ -41,6 +43,7 @@ const ChatIcon = HolderChatIcon;
 const SettingsIcon = HolderSettingsIcon;
 const AddIcon = HolderAddIcon;
 const ManageIcon = HolderManageIcon;
+const WorkFlowIcon = HolderWorkFlowIcon;
 const ReportsIcon = HolderReportsIcon;
 const BillingIcon = HolderBillingIcon;
 // --- End SVG Icon Placeholders ---
@@ -146,6 +149,15 @@ const Dashboard: React.FC = () => {
           refetchClients(); // Optionally refetch
         },
       },
+      {
+        id: "manageWorkFlow",
+        IconComponent: WorkFlowIcon,
+        ariaLabel: "Manage WorkFlows",
+        action: () => {
+          setCurrentLevelKey("manageWorkflowsView"); // Transition to table view state
+          refetchWorkflows(); // Optionally refetch
+        },
+      },
       // ... other client items
     ],
     Entities: [
@@ -223,6 +235,15 @@ const Dashboard: React.FC = () => {
     refetch: refetchEntities,
   } = useQuery(GET_MANAGE_ENTITIES, {
     skip: currentLevelKey !== "manageEntitiesView",
+  });
+
+  const {
+    data: workFlowsData,
+    loading: workFlowsLoading,
+    error: workFlowError,
+    refetch: refetchWorkFlows,
+  } = useQuery(GET_MANAGE_WORKFLOWS, {
+    skip: currentLevelKey !== "manageWorkFlowsView",
   });
 
   const handleEdit = (id: string) => {

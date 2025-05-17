@@ -78,7 +78,7 @@ const EntitiesTable: React.FC<EntitiesTableProps> = ({
                       onClick={() => onBilling(entity.iD)}
                       aria-label={`Entity ${entity.entityName || "entity"}`}
                     >
-                      Entities {/* Replace with Delete Icon */}
+                      Billing {/* Replace with Delete Icon */}
                     </button>
                   )}
                 </td>

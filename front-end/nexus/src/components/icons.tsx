@@ -208,6 +208,26 @@ const HolderManageIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
+const HolderWorkFlowIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg
+    width="120"
+    height="24"
+    viewBox="0 0 120 24"
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <text
+      x="0"
+      y="18"
+      fontSize="24"
+      fontFamily="Segoe UI, Tahoma, Geneva, Verdana, sans-serif"
+      fill="currentColor"
+    >
+      WorkFlows
+    </text>
+  </svg>
+);
+
 const HolderReportsIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg
     width="110"
@@ -259,6 +279,7 @@ export {
   HolderSettingsIcon,
   HolderAddIcon,
   HolderManageIcon,
+  HolderWorkFlowIcon,
   HolderReportsIcon,
   HolderBillingIcon,
 };

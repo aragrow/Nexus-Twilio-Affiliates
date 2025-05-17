@@ -200,6 +200,45 @@ class Nexus_Installer
  	    ) $charset_collate;";
         dbDelta($sql_data);
 
+        $table_name_workflows = $wpdb->prefix . 'nexus_workflows'; // Note: 'workflows' (plural) is common
+        $sql_workflows = "CREATE TABLE $table_name_workflows (
+            ID BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            client_id BIGINT UNSIGNED NOT NULL,          -- Link to the client this workflow belongs to
+            workflow_name VARCHAR(255) NOT NULL,
+            workflow_status VARCHAR(50) NOT NULL DEFAULT 'active', -- e.g., draft, active, inactive, archived
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (ID),
+            KEY client_id (client_id),
+            KEY workflow_status (workflow_status),
+            CONSTRAINT fk_workflow_client FOREIGN KEY (client_id) REFERENCES $table_name_clients(ID) ON DELETE CASCADE ON UPDATE CASCADE
+            -- If a client is deleted, their workflows are also deleted. Adjust ON DELETE if needed (e.g., RESTRICT, SET NULL)
+        ) $charset_collate;";
+        dbDelta($sql_workflows);
+
+        // --- Workflow Entities Table (Junction Table for Workflow Steps) ---
+        $table_name_workflow_entities = $wpdb->prefix . 'nexus_workflows_entities';
+        $sql_workflow_entities = "CREATE TABLE $table_name_workflow_entities (
+            ID BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            workflow_id BIGINT UNSIGNED NOT NULL,        -- Foreign key to nexus_workflows table
+            entity_id BIGINT UNSIGNED NOT NULL,          -- Foreign key to nexus_entities table
+            workflow_order INT UNSIGNED NOT NULL DEFAULT 0, -- Order of this entity within the workflow
+            step_status VARCHAR(50) NOT NULL DEFAULT 'pending', -- Status of this specific step in an instance (e.g., pending, active, completed, skipped) - Might be more for workflow *instances*
+            -- If you need specific settings for an entity *within* a workflow, add them here:
+            -- step_settings TEXT DEFAULT NULL, -- e.g., JSON for custom parameters for this entity in this step
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (ID),
+            UNIQUE KEY unique_workflow_entity_order (workflow_id, entity_id, workflow_order), -- Ensures an entity isn't repeated at the same order in the same workflow
+                                                                                            -- Or just UNIQUE KEY unique_workflow_order (workflow_id, workflow_order) if entity_id can be repeated
+            KEY workflow_id (workflow_id),
+            KEY entity_id (entity_id),
+            CONSTRAINT fk_wfe_workflow FOREIGN KEY (workflow_id) REFERENCES $table_name_workflows(ID) ON DELETE CASCADE ON UPDATE CASCADE,
+            CONSTRAINT fk_wfe_entity FOREIGN KEY (entity_id) REFERENCES $table_name_entities(ID) ON DELETE CASCADE ON UPDATE CASCADE
+            -- If an entity or workflow is deleted, these linking records are also deleted.
+        ) $charset_collate;";
+        dbDelta($sql_workflow_entities);
+
         // --- Potential Future Tables ---
         // Call Logs Table
         // Billing Records Table

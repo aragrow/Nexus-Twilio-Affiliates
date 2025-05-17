@@ -30,6 +30,9 @@ class NexusGraphQLTypeRegistrar
         $table_name_clients    = $wpdb->prefix . 'nexus_clients'; // Corrected: Removed duplicate/incorrect assignment
         $table_name_entities    = $wpdb->prefix . 'nexus_entities'; // If needed for other types
         $table_name_twilio_data = $wpdb->prefix . 'nexus_twilio_data';
+        $table_name_workflows = $wpdb->prefix . 'nexus_workflows';
+        $table_name_workflow_entities = $wpdb->prefix . 'nexus_workflow_entities';
+
         // --- Register NexusClient Type ---
         register_graphql_object_type('NexusClient', [
             'description' => __('A client associated with a Nexus Affiliate', 'nexus-twilio-affiliates'),
@@ -359,6 +362,115 @@ class NexusGraphQLTypeRegistrar
             ]
         ]);
 
+        // --- Register NexusWorkflowStep (represents an entry in nexus_workflow_entities) ---
+        register_graphql_object_type('NexusWorkflowStep', [
+            'description' => __('An entity step within a Nexus Workflow', 'nexus-twilio-affiliates'),
+            'fields'      => [
+                'iD' => [ // ID of the nexus_workflow_entities row
+                    'type'        => 'ID',
+                    'resolve'     => fn($row) => !empty($row->ID) ? (int) $row->ID : null,
+                ],
+                'workflowId' => [
+                    'type'        => 'Int',
+                    'description' => __('ID of the parent workflow', 'nexus-twilio-affiliates'),
+                    'resolve'     => fn($row) => !empty($row->workflow_id) ? (int) $row->workflow_id : null,
+                ],
+                'entityId' => [
+                    'type'        => 'Int',
+                    'description' => __('ID of the Nexus Entity in this step', 'nexus-twilio-affiliates'),
+                    'resolve'     => fn($row) => !empty($row->entity_id) ? (int) $row->entity_id : null,
+                ],
+                'workflowOrder' => [
+                    'type'        => 'Int',
+                    'description' => __('The order of this step in the workflow', 'nexus-twilio-affiliates'),
+                    'resolve'     => fn($row) => isset($row->workflow_order) ? (int) $row->workflow_order : null,
+                ],
+                'stepStatus' => [ // Status of this particular step definition
+                    'type'        => 'String',
+                    'description' => __('Status of this workflow step', 'nexus-twilio-affiliates'),
+                    'resolve'     => fn($row) => $row->step_status ?? null,
+                ],
+                // Connection to the actual NexusEntity
+                'entity' => [
+                    'type' => 'NexusEntity', // Assumes NexusEntity type is already registered
+                    'description' => __('The Nexus Entity details for this step', 'nexus-twilio-affiliates'),
+                    'resolve' => function ($workflow_step_row) use ($table_name_entities, $wpdb) {
+                        if (empty($workflow_step_row->entity_id)) return null;
+                        return $wpdb->get_row(
+                            $wpdb->prepare("SELECT * FROM $table_name_entities WHERE ID = %d", $workflow_step_row->entity_id)
+                        );
+                    }
+                ],
+                // Connection back to the parent Workflow
+                'workflow' => [
+                    'type' => 'NexusWorkflow',
+                    'description' => __('The parent workflow this step belongs to', 'nexus-twilio-affiliates'),
+                    'resolve' => function ($workflow_step_row) use ($table_name_workflows, $wpdb) {
+                        if (empty($workflow_step_row->workflow_id)) return null;
+                        return $wpdb->get_row(
+                            $wpdb->prepare("SELECT * FROM $table_name_workflows WHERE ID = %d", $workflow_step_row->workflow_id)
+                        );
+                    }
+                ]
+            ],
+        ]);
+
+        // --- Register NexusWorkflow Type ---
+        register_graphql_object_type('NexusWorkflow', [
+            'description' => __('A Nexus Workflow definition', 'nexus-twilio-affiliates'),
+            'fields'      => [
+                'iD' => [
+                    'type'        => 'ID',
+                    'resolve'     => fn($row) => !empty($row->ID) ? (int) $row->ID : null,
+                ],
+                'clientId' => [
+                    'type'        => 'Int',
+                    'description' => __('ID of the client this workflow belongs to', 'nexus-twilio-affiliates'),
+                    'resolve'     => fn($row) => !empty($row->client_id) ? (int) $row->client_id : null,
+                ],
+                'workflowName' => [
+                    'type'        => 'String',
+                    'resolve'     => fn($row) => $row->workflow_name ?? null,
+                ],
+                'workflowStatus' => [
+                    'type'        => 'String',
+                    'resolve'     => fn($row) => $row->workflow_status ?? null,
+                ],
+                'createdAt' => [
+                    'type'        => 'String',
+                    'resolve'     => fn($row) => $row->created_at ?? null,
+                ],
+                'updatedAt' => [
+                    'type'        => 'String',
+                    'resolve'     => fn($row) => $row->updated_at ?? null,
+                ],
+                // Connection to the Client
+                'client' => [
+                    'type' => 'NexusClient', // Assumes NexusClient type is registered
+                    'description' => __('The client this workflow belongs to', 'nexus-twilio-affiliates'),
+                    'resolve' => function ($workflow_row) use ($table_name_clients, $wpdb) {
+                        if (empty($workflow_row->client_id)) return null;
+                        return $wpdb->get_row(
+                            $wpdb->prepare("SELECT * FROM $table_name_clients WHERE ID = %d", $workflow_row->client_id)
+                        );
+                    }
+                ],
+                // Connection to its steps (ordered)
+                'steps' => [
+                    'type' => ['list_of' => 'NexusWorkflowStep'],
+                    'description' => __('The ordered steps (entities) in this workflow', 'nexus-twilio-affiliates'),
+                    'resolve' => function ($workflow_row) use ($table_name_workflow_entities, $wpdb) {
+                        if (empty($workflow_row->ID)) return [];
+                        return $wpdb->get_results(
+                            $wpdb->prepare(
+                                "SELECT * FROM $table_name_workflow_entities WHERE workflow_id = %d ORDER BY workflow_order ASC",
+                                $workflow_row->ID
+                            )
+                        ) ?: [];
+                    }
+                ]
+            ],
+        ]);
 
         // --- Register Root Queries ---
         register_graphql_field('RootQuery', 'nexusAffiliate', [
@@ -569,6 +681,70 @@ class NexusGraphQLTypeRegistrar
 
                 return $wpdb->get_results($wpdb->prepare($sql, ...$params)) ?: [];
             }
+        ]);
+
+        // --- Root Queries for Workflows ---
+        register_graphql_field('RootQuery', 'nexusWorkflow', [
+            'type'        => 'NexusWorkflow',
+            'description' => __('Retrieve a single Nexus Workflow by ID', 'nexus-twilio-affiliates'),
+            'args'        => [
+                'iD' => ['type' => ['non_null' => 'ID']],
+            ],
+            'resolve'     => function ($root, $args) use ($table_name_workflows, $wpdb) {
+                $workflow_id = absint($args['iD']);
+                if (empty($workflow_id)) return null;
+                return $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name_workflows WHERE ID = %d", $workflow_id));
+            },
+        ]);
+
+        register_graphql_field('RootQuery', 'nexusWorkflows', [
+            'type'        => ['list_of' => 'NexusWorkflow'],
+            'description' => __('Retrieve a list of Nexus Workflows', 'nexus-twilio-affiliates'),
+            'args'        => [
+                'first' => ['type' => 'Int', 'defaultValue' => 10],
+                'offset' => ['type' => 'Int', 'defaultValue' => 0],
+                'clientId' => ['type' => 'Int'],
+                'workflowStatus' => ['type' => 'String'],
+            ],
+            'resolve'     => function ($root, $args) use ($table_name_workflows, $wpdb) {
+                $sql = "SELECT * FROM $table_name_workflows";
+                $where_clauses = [];
+                $params = [];
+
+                if (!empty($args['clientId'])) {
+                    $where_clauses[] = "client_id = %d";
+                    $params[] = absint($args['clientId']);
+                }
+                if (!empty($args['workflowStatus'])) {
+                    $where_clauses[] = "workflow_status = %s";
+                    $params[] = sanitize_text_field($args['workflowStatus']);
+                }
+
+                if (count($where_clauses) > 0) {
+                    $sql .= " WHERE " . implode(" AND ", $where_clauses);
+                }
+                $sql .= " ORDER BY workflow_name ASC LIMIT %d OFFSET %d";
+                $params[] = absint($args['first']);
+                $params[] = absint($args['offset']);
+
+                return $wpdb->get_results($wpdb->prepare($sql, ...$params)) ?: [];
+            },
+        ]);
+
+        // --- Root Queries for Workflow Steps (Optional, usually accessed via Workflow.steps) ---
+        // You might not need direct root queries for NexusWorkflowStep if they are always fetched
+        // in the context of a parent NexusWorkflow. But if needed:
+        register_graphql_field('RootQuery', 'nexusWorkflowStep', [
+            'type'        => 'NexusWorkflowStep',
+            'description' => __('Retrieve a single Nexus Workflow Step by its own ID', 'nexus-twilio-affiliates'),
+            'args'        => [
+                'iD' => ['type' => ['non_null' => 'ID']], // ID from nexus_workflow_entities table
+            ],
+            'resolve'     => function ($root, $args) use ($table_name_workflow_entities, $wpdb) {
+                $step_id = absint($args['iD']);
+                if (empty($step_id)) return null;
+                return $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name_workflow_entities WHERE ID = %d", $step_id));
+            },
         ]);
     }
 }

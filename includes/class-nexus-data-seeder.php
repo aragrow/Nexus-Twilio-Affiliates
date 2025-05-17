@@ -64,6 +64,8 @@ class Nexus_Data_Seeder
         $table_clients = $wpdb->prefix . 'nexus_clients';
         $table_entities = $wpdb->prefix . 'nexus_entities';
         $table_data = $wpdb->prefix . 'nexus_twilio_data';
+        $table_workflows         = $wpdb->prefix . 'nexus_workflows';
+        $table_workflow_entities = $wpdb->prefix . 'nexus_workflows_entities';
 
         $sql_output = "-- Dummy Data for Affiliates and Clients\nSTART TRANSACTION;\n\n";
 
@@ -179,8 +181,9 @@ class Nexus_Data_Seeder
         error_log("-- Data for Entities --\n");
         $entity_login = false;
         // You can also pass DateTime objects directly:
-        $startDate = new DateTime('2025-01-01');
-        $endDate   = new DateTime('2025-04-30');
+        $startDate = '2025-01-01 00:00:00';
+        $endDate   = '2025-05-15 23:59:59';
+        $timezone  = 'UTC'; // The desired timezone for the generated DateTime object
         // Get all phone numbers with associated entity IDs (optional)
         $results = $wpdb->get_results(
             "SELECT entity_phone FROM $table_entities",
@@ -190,7 +193,7 @@ class Nexus_Data_Seeder
         if (! empty($results)) {
             foreach ($results as $row) {
                 $charge_to_phone = $row->entity_phone;
-                $dateTimeObject = $faker->datetime($startDate, $endDate);
+                $dateTimeObject = $faker->dateTimeBetween($startDate, $endDate, $timezone);
                 $charge_date = $dateTimeObject->format('Y-m-d H:i:s'); // Standard MySQL DATETIME format
                 $charge_no_minutes = rand(1, 60);
                 $charge_dollars = 0;
@@ -207,6 +210,66 @@ class Nexus_Data_Seeder
                 );
             }
         }
+
+        error_log("\n-- WorkFlows for Clients --\n");
+
+        // Get all clients
+        $clients = $wpdb->get_results("SELECT ID, client_name FROM $table_clients"); // Or all clients regardless of status
+
+        if (empty($clients)) {
+            error_log('Nexus Workflow Seeder: No clients found to seed workflows for.');
+            return;
+        }
+
+        foreach ($clients as $client) {
+
+            // --- 1. Create a Default Workflow for the Client ---
+            $workflow_name = esc_html($client->client_name) . ' - Default Workflow';
+            $workflow_data = [
+                'client_id'       => $client->ID,
+                'workflow_name'   => $workflow_name,
+                'workflow_status' => 'active', // Or 'draft'
+            ];
+            $workflow_format = ['%d', '%s', '%s'];
+
+            $inserted_workflow = $wpdb->insert($table_workflows, $workflow_data, $workflow_format);
+
+            if (false === $inserted_workflow) {
+                error_log($wpdb->last_error);
+                continue; // Skip to the next client
+            }
+
+            $new_workflow_id = $wpdb->insert_id;
+
+            $client_entities = $wpdb->get_results(
+                $wpdb->prepare("SELECT ID FROM $table_entities WHERE client_id = %d ORDER BY ID ASC", $client->ID)
+            );
+
+            if (empty($client_entities)) {
+                continue; // Next client
+            }
+
+            // --- 3. Add entities to the workflow in order ---
+            $workflow_order = 0;
+            foreach ($client_entities as $entity) {
+                $workflow_order++; // Increment order for each step
+
+                $workflow_entity_data = [
+                    'workflow_id'    => $new_workflow_id,
+                    'entity_id'      => $entity->ID,
+                    'workflow_order' => $workflow_order,
+                    'step_status'    => 'active', // Default status for the step in the workflow template
+                ];
+                $workflow_entity_format = ['%d', '%d', '%d', '%s'];
+
+                $inserted_step = $wpdb->insert($table_workflow_entities, $workflow_entity_data, $workflow_entity_format);
+
+                if (false === $inserted_step) {
+                    error_log($wpdb->last_error);
+                }
+            }
+        }
+        error_log("Nexus Workflow Seeder: All clients processed.");
 
         $wpdb->query("COMMIT");
         error_log('Done');
