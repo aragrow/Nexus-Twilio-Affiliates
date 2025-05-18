@@ -210,9 +210,9 @@ const HolderManageIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 const HolderWorkFlowIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg
-    width="120"
+    width="135"
     height="24"
-    viewBox="0 0 120 24"
+    viewBox="0 0 135 24"
     xmlns="http://www.w3.org/2000/svg"
     {...props}
   >

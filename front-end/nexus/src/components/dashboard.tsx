@@ -6,6 +6,7 @@ import ClientsTable from "./clientsTable"; // Assuming this component exists
 import EntitiesTable from "./entitiesTable"; // Assuming this component exists
 import WorkFlowsTable from "./workFlowsTable";
 import AffiliateEditForm from "./affiliateEditForm";
+import { EditWorkflowModal } from "./editWorkflowModal";
 import { useQuery } from "@apollo/client";
 import {
   GET_MANAGE_AFFILIATES,
@@ -13,6 +14,7 @@ import {
   GET_CURRENT_USER_STATUS,
   GET_MANAGE_ENTITIES,
   GET_MANAGE_WORKFLOWS,
+  GET_WORKFLOW,
 } from "./graphqlQueries";
 import client from "./apolloClient"; // Already imported
 import { ApolloProvider } from "@apollo/client";
@@ -249,6 +251,16 @@ const Dashboard: React.FC = () => {
     skip: currentLevelKey !== "manageWorkFlowsView",
   });
 
+  const {
+    data: workFlowData,
+    loading: workFlowLoading,
+    error: workFlowError,
+    refetch: refetchWorkFlow,
+  } = useQuery(GET_WORKFLOW, {
+    variables: { id: selectedId },
+    skip: currentLevelKey !== "editWorkFlowView",
+  });
+
   /*
   const handleEdit = (id: string) => {
     setSelectedId(id);
@@ -300,6 +312,29 @@ const Dashboard: React.FC = () => {
     localStorage.removeItem("userId");
     // Potentially redirect to login or reload to let WordPress handle auth
     window.location.reload();
+  };
+
+  const [selectedWorkFlow, setSelectedWorkFlow] = useState<any>(null);
+  const [showEditWorkFlowModal, setShowEditWorkFlowModal] = useState(false);
+
+  const handleEditWorkFlow = (workflowId: string) => {
+    const selectedWorkFlow = workFlows.find((w) => w.iD === workflowId);
+    if (selectedWorkFlow) {
+      setSelectedWorkFlow(selectedWorkFlow);
+      setShowEditWorkFlowModal(true);
+    }
+  };
+
+  const handleWorkFlowSave = (updatedWorkflow: any) => {
+    console.log("Saved workflow:", updatedWorkflow);
+    setShowEditWorkFlowModal(false);
+    setSelectedWorkFlow(null);
+    // Update logic here if needed
+  };
+
+  const handleWorkFlowCancel = () => {
+    setShowEditWorkFlowModal(false);
+    setSelectedWorkFlow(null);
   };
 
   const currentNavItems = iconMap[currentLevelKey] || [];
@@ -412,12 +447,21 @@ const Dashboard: React.FC = () => {
                 workFlows={workFlowsData?.nexusWorkFlows || []}
                 isLoading={workFlowsLoading}
                 isError={workFlowsError?.message}
-                onEdit={(id) => console.log("Edit workFlow action:", id)}
+                onEdit={handleEditWorkFlow}
+              />
+            ) : currentLevelKey == "editWorkFlowView" ? (
+              <EditWorkflowModal
+                workflow={workFlowData?.nexusWorkFlow || []}
+                isLoading={workFlowLoading}
+                isError={workFlowsError?.message}
+                onSave={handleWorkFlowSave}
+                onCancel={handleWorkFlowCancel}
               />
             ) : (
               <>
                 {currentNavItems.map((item: NavItem) => (
                   <div
+                    className={item.ariaLabel.replace(/\s+/g, "")}
                     key={item.id}
                     style={styles.dashboardCard}
                     role="button"

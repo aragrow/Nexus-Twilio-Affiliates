@@ -60,6 +60,19 @@ export const GET_MANAGE_WORKFLOWS = gql`
   }
 `;
 
+export const GET_WORKFLOW = gql`
+  query GetWorkFlow($id: ID!) {
+    nexusWorkFlow(iD: $id) {
+      clientId
+      createdAt
+      iD
+      updatedAt
+      workFlowName
+      workFlowStatus
+    }
+  }
+`;
+
 // A simple query to check authentication (e.g., get current user's viewer data)
 export const GET_CURRENT_USER_STATUS = gql`
   query GetCurrentUserStatus {
