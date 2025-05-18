@@ -1,12 +1,13 @@
 // Dashboard.tsx
 import React, { useState, useEffect } from "react";
 import styles from "./dashboardStyles"; // Assuming this file exists and is correctly set up
+// ... [imports at the top remain unchanged]
 import AffiliatesTable from "./affiliatesTable"; // Assuming this component exists
 import ClientsTable from "./clientsTable"; // Assuming this component exists
 import EntitiesTable from "./entitiesTable"; // Assuming this component exists
-import WorkFlowsTable from "./workFlowsTable";
+import WorkFlowsTable from "./WorkFlowsTable";
 import AffiliateEditForm from "./affiliateEditForm";
-import { EditWorkflowModal } from "./editWorkflowModal";
+import { EditWorkFlowModal } from "./editWorkFlowModal";
 import { useQuery } from "@apollo/client";
 import {
   GET_MANAGE_AFFILIATES,
@@ -16,8 +17,10 @@ import {
   GET_MANAGE_WORKFLOWS,
   GET_WORKFLOW,
 } from "./graphqlQueries";
+import type { WorkFlow } from "./interface"; // Ensure this file contains the WorkFlow type definition
 import client from "./apolloClient"; // Already imported
 import { ApolloProvider } from "@apollo/client";
+// ... [imports at the top remain unchanged]
 
 import {
   PlaceholderIcon,
@@ -70,10 +73,75 @@ const Dashboard: React.FC = () => {
     },
   });
 
+  // --- State hooks ---
   const [currentLevelKey, setCurrentLevelKey] = useState<string>("root");
   const [userName, setUserName] = useState<string>("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
   const [isPowerButtonHovered, setIsPowerButtonHovered] = useState(false);
   const [isPowerButtonActive, setIsPowerButtonActive] = useState(false);
+
+  // --- New state for Edit workFlow Modal ---
+  const [selectedWorkFlow, setSelectedWorkFlow] = useState<WorkFlow | null>(
+    null
+  );
+  const [isEditWorkFlowModalOpen, setIsEditWorkFlowModalOpen] = useState(false);
+
+  const {
+    data: affiliatesData,
+    loading: affiliatesLoading,
+    error: affiliatesError,
+    refetch: refetchAffiliates,
+  } = useQuery(GET_MANAGE_AFFILIATES, {
+    skip: currentLevelKey !== "manageAffiliatesView",
+  });
+
+  const {
+    data: clientsData,
+    loading: clientsLoading,
+    error: clientsError,
+    refetch: refetchClients,
+  } = useQuery(GET_MANAGE_CLIENTS, {
+    skip: currentLevelKey !== "manageClientsView",
+  });
+
+  const {
+    data: entitiesData,
+    loading: entitiesLoading,
+    error: entitiesError,
+    refetch: refetchEntities,
+  } = useQuery(GET_MANAGE_ENTITIES, {
+    skip: currentLevelKey !== "manageEntitiesView",
+  });
+
+  const {
+    data: workFlowsData,
+    loading: workFlowsLoading,
+    error: workFlowsError,
+    refetch: refetchWorkFlows,
+  } = useQuery(GET_MANAGE_WORKFLOWS, {
+    skip: currentLevelKey !== "manageWorkFlowsView",
+  });
+
+  // Add this query to fetch a single workFlow (used by handleEditworkFlow)
+  const { refetch: refetchSingleWorkFlow } = useQuery(GET_WORKFLOW, {
+    skip: currentLevelKey !== "editworkFlowView",
+  });
+
+  const {
+    data: workFlowData,
+    loading: workFlowLoading,
+    error: workFlowError,
+    refetch: refetchWorkFlow,
+  } = useQuery(GET_WORKFLOW, {
+    variables: { id: selectedId },
+    skip: currentLevelKey !== "editWorkFlowView",
+  });
+
+  const handleEdit = (id: string) => {
+    console.log(" handleEdit - Executed");
+    setSelectedId(id);
+  };
 
   // --- Navigation and Action Map ---
   const iconMap: { [key: string]: NavItem[] } = {
@@ -213,63 +281,6 @@ const Dashboard: React.FC = () => {
     ],
   }; // End iconMap
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const {
-    data: affiliatesData,
-    loading: affiliatesLoading,
-    error: affiliatesError,
-    refetch: refetchAffiliates,
-  } = useQuery(GET_MANAGE_AFFILIATES, {
-    skip: currentLevelKey !== "manageAffiliatesView",
-  });
-
-  const {
-    data: clientsData,
-    loading: clientsLoading,
-    error: clientsError,
-    refetch: refetchClients,
-  } = useQuery(GET_MANAGE_CLIENTS, {
-    skip: currentLevelKey !== "manageClientsView",
-  });
-
-  const {
-    data: entitiesData,
-    loading: entitiesLoading,
-    error: entitiesError,
-    refetch: refetchEntities,
-  } = useQuery(GET_MANAGE_ENTITIES, {
-    skip: currentLevelKey !== "manageEntitiesView",
-  });
-
-  const {
-    data: workFlowsData,
-    loading: workFlowsLoading,
-    error: workFlowsError,
-    refetch: refetchWorkFlows,
-  } = useQuery(GET_MANAGE_WORKFLOWS, {
-    skip: currentLevelKey !== "manageWorkFlowsView",
-  });
-
-  const {
-    data: workFlowData,
-    loading: workFlowLoading,
-    error: workFlowError,
-    refetch: refetchWorkFlow,
-  } = useQuery(GET_WORKFLOW, {
-    variables: { id: selectedId },
-    skip: currentLevelKey !== "editWorkFlowView",
-  });
-
-  /*
-  const handleEdit = (id: string) => {
-    setSelectedId(id);
-  };
-*/
-  const handleCloseEdit = () => {
-    setSelectedId(null);
-  };
-
   useEffect(() => {
     const storedUserName = localStorage.getItem("userName") || "User"; // Default to "User"
     setUserName(storedUserName);
@@ -314,25 +325,54 @@ const Dashboard: React.FC = () => {
     window.location.reload();
   };
 
-  const [selectedWorkFlow, setSelectedWorkFlow] = useState<any>(null);
-  const [showEditWorkFlowModal, setShowEditWorkFlowModal] = useState(false);
+  const [selectedWorkFlowId, setSelectedWorkFlowId] = useState<string | null>(
+    null
+  );
 
-  const handleEditWorkFlow = (workflowId: string) => {
-    const selectedWorkFlow = workFlows.find((w) => w.iD === workflowId);
-    if (selectedWorkFlow) {
-      setSelectedWorkFlow(selectedWorkFlow);
-      setShowEditWorkFlowModal(true);
+  /**
+   *      Returned by useQuery	   Renamed to	                    Meaning
+   *      data	                    selectedWorkFlowData	        The actual result of the query (workflow object)
+   *      loading	                  selectedWorkFlowLoading	      Boolean showing if the query is in progress
+   */
+  const { data: selectedWorkFlowData, loading: selectedWorkFlowLoading } =
+    useQuery(GET_WORKFLOW, {
+      variables: { id: selectedWorkFlowId }, //This tells Apollo to pass the selectedWorkFlowId as the id variable into your GET_WORKFLOW GraphQL query.
+      skip: !selectedWorkFlowId, // This is useful to avoid fetching until you're sure you have a valid ID.
+    });
+
+  /**
+   * @param workFlowId This function is called when the user wants to edit a specific workflow.
+   * It tries to refetch the data for that specific workflow using its ID.
+   * If the workflow is found, it stores that data in state and opens a modal so the user can edit it.
+   * If the workflow isn’t found or something goes wrong, it logs an error.
+   */
+  // --- Handler to edit a workFlow ---
+  const handleEditWorkFlow = async (workFlowId: string) => {
+    try {
+      console.log("handleEditWorkFlow - Executed.");
+      const { data } = await refetchSingleWorkFlow({ id: workFlowId });
+      if (data?.nexusWorkFlow) {
+        // Checks if the existing data (from a useQuery hook) has a .WorkFlow object.
+        setSelectedWorkFlowId(workFlowId);
+        setSelectedWorkFlow(data.nexusWorkFlow); // Stores the workflow in local state so it can be edited (setSelectedWorkFlow).
+        setIsEditWorkFlowModalOpen(true); // Opens a modal UI to show the form for editing
+        console.log("NexusWorkFlow Object: ", data?.nexusWorkFlow);
+      } else {
+        console.error("The WorkFlow not found for ID:", workFlowId);
+      }
+    } catch (error) {
+      console.error("Error fetching workFlow:", error);
     }
   };
 
-  const handleWorkFlowSave = (updatedWorkflow: any) => {
-    console.log("Saved workflow:", updatedWorkflow);
+  const handleWorkFlowSave = (updatedWorkFlow: any) => {
+    console.log("Saved workFlow:", updatedWorkFlow);
     setShowEditWorkFlowModal(false);
     setSelectedWorkFlow(null);
     // Update logic here if needed
   };
 
-  const handleWorkFlowCancel = () => {
+  const handleCloseEditWorkFlowModal = () => {
     setShowEditWorkFlowModal(false);
     setSelectedWorkFlow(null);
   };
@@ -443,20 +483,21 @@ const Dashboard: React.FC = () => {
                 }
               />
             ) : currentLevelKey == "manageWorkFlowsView" ? (
-              <WorkFlowsTable
-                workFlows={workFlowsData?.nexusWorkFlows || []}
-                isLoading={workFlowsLoading}
-                isError={workFlowsError?.message}
-                onEdit={handleEditWorkFlow}
-              />
-            ) : currentLevelKey == "editWorkFlowView" ? (
-              <EditWorkflowModal
-                workflow={workFlowData?.nexusWorkFlow || []}
-                isLoading={workFlowLoading}
-                isError={workFlowsError?.message}
-                onSave={handleWorkFlowSave}
-                onCancel={handleWorkFlowCancel}
-              />
+              <>
+                <WorkFlowsTable
+                  workFlows={workFlowsData?.nexusWorkFlows || []}
+                  isLoading={workFlowsLoading}
+                  isError={workFlowsError?.message}
+                  onEdit={handleEditWorkFlow} // <-- pass it here
+                />
+                {isEditWorkFlowModalOpen && selectedWorkFlowId && (
+                  <EditWorkFlowModal
+                    workFlow={selectedWorkFlow}
+                    onClose={handleCloseEditWorkFlowModal}
+                    refetchWorkFlow={refetchWorkFlow}
+                  />
+                )}
+              </>
             ) : (
               <>
                 {currentNavItems.map((item: NavItem) => (

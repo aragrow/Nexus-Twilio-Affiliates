@@ -1,0 +1,40 @@
+const modalStyles: { [key: string]: React.CSSProperties } = {
+    backdrop: {
+      position: 'fixed' as const,
+      top: 0,
+      left: 0,
+      width: '100vw',
+      height: '100vh',
+      backgroundColor: 'rgba(0, 0, 0, 0.4)',
+      backdropFilter: 'blur(6px)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+    },
+    modal: {
+      background: 'rgba(255, 255, 255, 0.1)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      border: '1px solid rgba(255, 255, 255, 0.2)',
+      borderRadius: '1rem',
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+      padding: '2rem',
+      width: '90%',
+      maxWidth: '480px',
+      color: '#fff',
+      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      animation: 'fadeIn 0.3s ease-in-out',
+    },
+    button: {
+      marginTop: '1.5rem',
+      backgroundColor: '#1f2937',
+      color: '#fff',
+      border: 'none',
+      padding: '0.6rem 1.2rem',
+      borderRadius: '0.5rem',
+      cursor: 'pointer',
+    },
+};
+  
+export default modalStyles;

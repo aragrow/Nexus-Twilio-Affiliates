@@ -92,13 +92,40 @@ interface WorkFlowsTableProps {
   workFlows: WorkFlow[];
   isLoading: boolean;
   isError: string | null;
-  onEdit?: (workFlowsId: string) => void; // Optional: for edit action
+  onEditWorkFlow: (id: string) => void;
 }
 
 interface BackButtonProps {
   onClick: () => void;
   label?: string;
   className?: string;
+}
+
+interface ModalProps {
+  isOpen: boolean; // Controls modal visibility
+  onClose: () => void; // Function to close the modal
+  children: React.ReactNode; // Content to render inside the modal
+}
+
+/**
+ * Workflow Form Structure
+ */
+interface WorkFlowForm {
+  id?: number; // Optional if editing existing workflow
+  client_id: number;
+  workflow_name: string;
+  workflow_status: string; // E.g., active, paused, archived
+}
+
+/**
+ * Edit Workflow Modal Props
+ * Used to edit or create a new workflow
+ */
+interface EditWorkFlowModalProps {
+  isOpen: boolean; // Whether the modal is visible
+  onClose: () => void; // Close modal handler
+  onSave: (data: WorkFlowForm) => void; // Save action handler
+  initialData?: WorkFlowForm; // Optional initial data for editing
 }
 
 export type {
@@ -113,5 +140,8 @@ export type {
   ClientsTableProps,
   EntitiesTableProps,
   WorkFlowsTableProps,
+  EditWorkFlowModalProps,
   BackButtonProps,
+  ModalProps,
+  WorkFlowForm,
 };

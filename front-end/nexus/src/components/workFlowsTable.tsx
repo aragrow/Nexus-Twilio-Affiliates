@@ -83,53 +83,40 @@ const workFlowsTable: React.FC<workFlowsTableProps> = ({
   return (
     <>
       <div style={workFlowsStyles.tableContainer}>
-        {" "}
-        {/* Main container for responsiveness */}
         <table style={workFlowsStyles.table}>
           <thead style={workFlowsStyles.tableHead}>
             <tr>
               <th style={workFlowsStyles.tableHeader}>Client Name</th>
-              <th style={workFlowsStyles.tableHeader}>workFlow Name</th>
-              <th style={workFlowsStyles.tableHeader}>workFlow Status</th>
+              <th style={workFlowsStyles.tableHeader}>Workflow Name</th>
+              <th style={workFlowsStyles.tableHeader}>Status</th>
               <th style={workFlowsStyles.tableHeader}>ID</th>
-              {/* Add Actions header if you have onEdit/onDelete */}
               {onEdit && <th style={workFlowsStyles.tableHeader}>Actions</th>}
             </tr>
           </thead>
           <tbody style={workFlowsStyles.tableBody}>
-            {paginatedworkFlows.map((workFlow) => (
-              <tr key={workFlow.iD} style={workFlowsStyles.tableRow}>
-                <td
-                  style={workFlowsStyles.tableCell}
-                  data-label="workFlow Client Name:"
-                >
-                  {workFlow.client?.clientName || "N/A"}
+            {paginatedworkFlows.map((workflow) => (
+              <tr key={workflow.iD} style={workFlowsStyles.tableRow}>
+                <td style={workFlowsStyles.tableCell} data-label="Client:">
+                  {workflow.client?.clientName || "N/A"}
                 </td>
-                <td
-                  style={workFlowsStyles.tableCell}
-                  data-label="workFlow Name:"
-                >
-                  {workFlow.workFlowName || "N/A"}
+                <td style={workFlowsStyles.tableCell} data-label="Name:">
+                  {workflow.workFlowName || "N/A"}
                 </td>
                 <td style={workFlowsStyles.tableCell} data-label="Status:">
-                  {workFlow.workFlowStatus}
+                  {workflow.workFlowStatus}
                 </td>
                 <td style={workFlowsStyles.tableCell} data-label="ID:">
-                  {workFlow.iD}
+                  {workflow.iD}
                 </td>
                 {onEdit && (
                   <td style={workFlowsStyles.tableCell} data-label="Actions:">
-                    {onEdit && (
-                      <button
-                        style={workFlowsStyles.actionButton} // Style this button
-                        onClick={() => onEdit(workFlow.iD)}
-                        aria-label={`Edit ${
-                          workFlow.workFlowName || "workFlow"
-                        }`}
-                      >
-                        Edit {/* Replace with Edit Icon */}
-                      </button>
-                    )}
+                    <button
+                      style={workFlowsStyles.actionButton}
+                      onClick={() => onEdit(workflow.iD)}
+                      aria-label={`Edit ${workflow.workFlowName || "workflow"}`}
+                    >
+                      Edit
+                    </button>
                   </td>
                 )}
               </tr>
