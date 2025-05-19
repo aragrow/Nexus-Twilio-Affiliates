@@ -1,43 +1,41 @@
-// AffiliatesTable.tsx
+// entitiesTable.tsx
 import React, { useState, useMemo } from "react";
-import affiliatesStyles from "./affiliatesStyles"; // Assuming table styles are in dashboardStyles
-import type { AffiliatesTableProps } from "./interface"; // Importing the Affiliate interface
+import entitiesStyles from "./entitiesStyles"; // Assuming table styles are in dashboardStyles
+import type { EntitiesViewProps } from "./interface"; // Importing the entity interface
 
 const ITEMS_PER_PAGE = 15; // Or make this a prop if you want it configurable
 
-const AffiliatesTable: React.FC<AffiliatesTableProps> = ({
-  affiliates,
+const EntitiesView: React.FC<EntitiesViewProps> = ({
+  entities,
   isLoading,
-  error,
+  isError,
   onEdit,
-  onClients,
+  onBilling,
 }) => {
+  if (isLoading) {
+    return <div style={entitiesStyles.loader}>Loading entities...</div>; // Style this loader
+  }
+
+  if (isError) {
+    return <div style={entitiesStyles.errorMessage}>{isError}</div>; // Style this error message
+  }
+
+  if (!entities || entities.length === 0) {
+    return <div style={entitiesStyles.noDataMessage}>No entities found.</div>; // Style this
+  }
+
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Memoize the paginated affiliates to avoid re-calculating on every render
-  // unless affiliates or currentPage changes.
-  const paginatedAffiliates = useMemo(() => {
-    if (!affiliates) return [];
+  // Memoize the paginated entities to avoid re-calculating on every render
+  // unless entities or currentPage changes.
+  const paginatedEntities = useMemo(() => {
+    if (!entities) return [];
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
-    return affiliates.slice(startIndex, endIndex);
-  }, [affiliates, currentPage]);
+    return entities.slice(startIndex, endIndex);
+  }, [entities, currentPage]);
 
-  if (isLoading) {
-    return <div style={affiliatesStyles.loader}>Loading affiliates...</div>; // Style this loader
-  }
-
-  if (error) {
-    return <div style={affiliatesStyles.errorMessage}>{error}</div>; // Style this error message
-  }
-
-  if (!affiliates || affiliates.length === 0) {
-    return (
-      <div style={affiliatesStyles.noDataMessage}>No affiliates found.</div>
-    ); // Style this
-  }
-
-  const totalPages = Math.ceil(affiliates.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(entities.length / ITEMS_PER_PAGE);
 
   const handleNextPage = () => {
     setCurrentPage((prevPage) => Math.min(prevPage + 1, totalPages));
@@ -85,66 +83,62 @@ const AffiliatesTable: React.FC<AffiliatesTableProps> = ({
 
   return (
     <>
-      {" "}
-      {/* Use Fragment to return table and pagination controls */}
-      <div style={affiliatesStyles.tableContainer}>
+      <div style={entitiesStyles.tableContainer}>
         {" "}
         {/* Main container for responsiveness */}
-        <table style={affiliatesStyles.table}>
-          <thead style={affiliatesStyles.tableHead}>
+        <table style={entitiesStyles.table}>
+          <thead style={entitiesStyles.tableHead}>
             <tr>
-              <th style={affiliatesStyles.tableHeader}>Company Name</th>
-              <th style={affiliatesStyles.tableHeader}>Contact Name</th>
-              <th style={affiliatesStyles.tableHeader}>ID</th>
+              <th style={entitiesStyles.tableHeader}>Entity Type</th>
+              <th style={entitiesStyles.tableHeader}>Entity Name</th>
+              <th style={entitiesStyles.tableHeader}>Entity Phone</th>
+              <th style={entitiesStyles.tableHeader}>Entity Status</th>
+              <th style={entitiesStyles.tableHeader}>ID</th>
               {/* Add Actions header if you have onEdit/onDelete */}
-              {(onEdit || onClients) && (
-                <th style={affiliatesStyles.tableHeader}>Actions</th>
+              {(onEdit || onBilling) && (
+                <th style={entitiesStyles.tableHeader}>Actions</th>
               )}
             </tr>
           </thead>
-          <tbody style={affiliatesStyles.tableBody}>
-            {paginatedAffiliates.map((affiliate) => (
-              <tr key={affiliate.iD} style={affiliatesStyles.tableRow}>
-                <td
-                  style={affiliatesStyles.tableCell}
-                  data-label="Company Name:"
-                >
-                  {affiliate.companyName || "N/A"}
+          <tbody style={entitiesStyles.tableBody}>
+            {paginatedEntities.map((entity) => (
+              <tr key={entity.iD} style={entitiesStyles.tableRow}>
+                <td style={entitiesStyles.tableCell} data-label="entity TYPE:">
+                  {entity.entityType || "N/A"}
                 </td>
-                <td
-                  style={affiliatesStyles.tableCell}
-                  data-label="Contact Name:"
-                >
-                  {affiliate.contactName || "N/A"}
+                <td style={entitiesStyles.tableCell} data-label="entity Name:">
+                  {entity.entityName || "N/A"}
                 </td>
-                <td style={affiliatesStyles.tableCell} data-label="ID:">
-                  {affiliate.iD}
+                <td style={entitiesStyles.tableCell} data-label="entity Phone:">
+                  {entity.entityPhone || "N/A"}
                 </td>
-                {(onEdit || onClients) && (
-                  <td style={affiliatesStyles.tableCell} data-label="Actions:">
+                <td style={entitiesStyles.tableCell} data-label="Status:">
+                  {entity.entityStatus}
+                </td>
+                <td style={entitiesStyles.tableCell} data-label="ID:">
+                  {entity.iD}
+                </td>
+                {(onEdit || onBilling) && (
+                  <td style={entitiesStyles.tableCell} data-label="Actions:">
                     {onEdit && (
                       <button
-                        style={affiliatesStyles.actionButton} // Style this button
-                        onClick={() => onEdit(affiliate.iD)}
-                        aria-label={`Edit ${
-                          affiliate.companyName || "affiliate"
-                        }`}
+                        style={entitiesStyles.actionButton} // Style this button
+                        onClick={() => onEdit(entity.iD)}
+                        aria-label={`Edit ${entity.entityName || "entity"}`}
                       >
                         Edit {/* Replace with Edit Icon */}
                       </button>
                     )}
-                    {onClients && (
+                    {onBilling && (
                       <button
                         style={{
-                          ...affiliatesStyles.actionButton,
-                          ...affiliatesStyles.deleteButton,
+                          ...entitiesStyles.actionButton,
+                          ...entitiesStyles.deleteButton,
                         }} // Style this
-                        onClick={() => onClients(affiliate.iD)}
-                        aria-label={`Clients ${
-                          affiliate.companyName || "affiliate"
-                        }`}
+                        onClick={() => onBilling(entity.iD)}
+                        aria-label={`Entity ${entity.entityName || "entity"}`}
                       >
-                        Clients {/* Replace with Delete Icon */}
+                        Billing {/* Replace with Delete Icon */}
                       </button>
                     )}
                   </td>
@@ -156,9 +150,9 @@ const AffiliatesTable: React.FC<AffiliatesTableProps> = ({
       </div>
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div style={affiliatesStyles.paginationContainer}>
+        <div style={entitiesStyles.paginationContainer}>
           <button
-            style={affiliatesStyles.paginationButton}
+            style={entitiesStyles.paginationButton}
             onClick={handlePreviousPage}
             disabled={currentPage === 1}
             aria-label="Go to previous page"
@@ -170,14 +164,14 @@ const AffiliatesTable: React.FC<AffiliatesTableProps> = ({
           {pageNumbersToDisplay[0] > 1 && (
             <>
               <button
-                style={affiliatesStyles.paginationButton}
+                style={entitiesStyles.paginationButton}
                 onClick={() => handleGoToPage(1)}
                 aria-label="Go to page 1"
               >
                 1
               </button>
               {pageNumbersToDisplay[0] > 2 && (
-                <span style={affiliatesStyles.paginationEllipsis}>...</span>
+                <span style={entitiesStyles.paginationEllipsis}>...</span>
               )}
             </>
           )}
@@ -186,9 +180,9 @@ const AffiliatesTable: React.FC<AffiliatesTableProps> = ({
             <button
               key={pageNumber}
               style={{
-                ...affiliatesStyles.paginationButton,
+                ...entitiesStyles.paginationButton,
                 ...(currentPage === pageNumber
-                  ? affiliatesStyles.paginationButtonActive
+                  ? entitiesStyles.paginationButtonActive
                   : {}),
               }}
               onClick={() => handleGoToPage(pageNumber)}
@@ -204,10 +198,10 @@ const AffiliatesTable: React.FC<AffiliatesTableProps> = ({
             <>
               {pageNumbersToDisplay[pageNumbersToDisplay.length - 1] <
                 totalPages - 1 && (
-                <span style={affiliatesStyles.paginationEllipsis}>...</span>
+                <span style={entitiesStyles.paginationEllipsis}>...</span>
               )}
               <button
-                style={affiliatesStyles.paginationButton}
+                style={entitiesStyles.paginationButton}
                 onClick={() => handleGoToPage(totalPages)}
                 aria-label={`Go to page ${totalPages}`}
               >
@@ -217,14 +211,14 @@ const AffiliatesTable: React.FC<AffiliatesTableProps> = ({
           )}
 
           <button
-            style={affiliatesStyles.paginationButton}
+            style={entitiesStyles.paginationButton}
             onClick={handleNextPage}
             disabled={currentPage === totalPages}
             aria-label="Go to next page"
           >
             » {/* Next Icon/Text */}
           </button>
-          <span style={affiliatesStyles.paginationInfo}>
+          <span style={entitiesStyles.paginationInfo}>
             Page {currentPage} of {totalPages}
           </span>
         </div>
@@ -233,4 +227,4 @@ const AffiliatesTable: React.FC<AffiliatesTableProps> = ({
   );
 };
 
-export default AffiliatesTable;
+export default EntitiesView;

@@ -14,15 +14,15 @@ export const GET_MANAGE_AFFILIATES = gql`
 export const GET_MANAGE_CLIENTS = gql`
   query GetManageClients {
     nexusClients {
+      affiliate {
+        companyName
+      }
       clientName
       clientPhone
       status
       affiliateRatePerMinute
       affiliateId
       clientEmail
-      affiliate {
-        companyName
-      }
     }
   }
 `;

@@ -1,8 +1,8 @@
 // Dashboard.tsx
 import React, { useState, useEffect } from "react";
 import styles from "./dashboardStyles"; // Assuming this file exists and is correctly set up
-import AffiliatesTable from "./affiliatesTable"; // Assuming this component exists
-import ClientsTable from "./clientsTable"; // Assuming this component exists
+import AffiliatesTable from "./affiliatesView"; // Assuming this component exists
+import ClientsTable from "./clientsView"; // Assuming this component exists
 import AffiliateEditForm from "./affiliateEditForm";
 
 import {

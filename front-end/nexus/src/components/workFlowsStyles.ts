@@ -8,7 +8,74 @@ const workFlowsStyles: { [key: string]: React.CSSProperties } = {
       backgroundColor: 'rgba(255, 255, 255, 0.05)', // Dark theme table bg
       borderRadius: '8px',
       padding: '1px',
+  },
+  // --- Client Search Dropdown ---
+  clientSearchContainer: {
+    position: 'relative', // For dropdown positioning
+    marginBottom: '20px',
+    display: 'flex', // To align input and clear button
+    alignItems: 'center',
+  },
+  searchInput: {
+    flexGrow: 1,
+    padding: '10px 15px',
+    fontSize: '1rem',
+    border: '1px solid var(--ui-element-bg, #444)', // Darker border
+    borderRadius: 'var(--ui-border-radius-sm, 4px)',
+    backgroundColor: 'var(--ui-bg-color, #1a1d24)', // Main background or slightly lighter
+    color: 'var(--ui-text-color-light, #e0e0e0)',
+    boxSizing: 'border-box',
+    outline: 'none',
+    transition: 'border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+    // Futuristic: maybe a subtle glow on focus
+    '&:focus': { // This is JSS-like syntax; for plain objects, handle focus in JS or CSS
+      borderColor: 'var(--ui-primary-accent, #00aeff)',
+      boxShadow: '0 0 0 2px rgba(0, 174, 255, 0.3)',
     },
+  },
+  clearFilterButton: {
+    background: 'transparent',
+    border: 'none',
+    color: '#aaa',
+    fontSize: '1.2rem',
+    padding: '0 10px',
+    cursor: 'pointer',
+    marginLeft: '-35px', // Position inside the input
+    zIndex: 2, // Above input text
+    '&:hover': {
+      color: 'var(--ui-text-color-light, #e0e0e0)',
+    },
+  },
+  searchResultsDropdown: {
+    position: 'absolute',
+    width: '100%', // Match the search input container
+    top: '100%', // Position below the input
+    left: 0,
+    maxHeight: '250px',
+    overflowY: 'auto',
+    backgroundColor: 'var(--ui-bg-color, #1a1d24)',
+    border: '1px solid var(--ui-element-bg, #444)',
+    borderTop: 'none',
+    borderRadius: '0 0 var(--ui-border-radius-sm, 4px) var(--ui-border-radius-sm, 4px)',
+    zIndex: 1000, // Ensure it's on top
+    boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
+  },
+  searchResultItem: {
+    padding: '10px 15px',
+    cursor: 'pointer',
+    borderBottom: '1px solid var(--ui-element-bg, #444)',
+    transition: 'background-color 0.15s ease-in-out',
+    '&:last-child': {
+      borderBottom: 'none',
+    },
+    // Hover effect handled by JS or direct CSS :hover if not using JS for it
+  },
+  searchResultItemHover: { // If you set this via JS onMouseEnter
+    backgroundColor: 'var(--ui-primary-accent, #00aeff)',
+    color: 'var(--ui-bg-color, #1a1d24)',
+  },
+
+
     table: {
       width: '100%',
       borderCollapse: 'collapse',

@@ -22,6 +22,14 @@ interface Affiliate {
   status?: string;
 }
 
+interface AffiliatesViewProps {
+  affiliates: Affiliate[];
+  isLoading: boolean;
+  isError: string | null;
+  onEdit?: (affiliateId: string) => void; // Optional: for edit action
+  onClients?: (id: string) => void; // 👈 add this
+}
+
 interface Client {
   iD: string;
   accountno: string | null;
@@ -31,7 +39,17 @@ interface Client {
   affiliateRatePerMinute: string | null;
   affiliateId: string | null;
   clientEmail: string | null;
-  affiliate?: Affiliate; // The resolved client object (optional if not always fetched)
+  affiliate?: {
+    companyName: string | null;
+  };
+}
+
+interface ClientsViewProps {
+  clients: Client[];
+  isLoading: boolean;
+  isError: string | null;
+  onEdit?: (clientId: string) => void; // Optional: for edit action
+  onEntities?: (id: string) => void; // 👈 add this
 }
 
 interface Entity {
@@ -47,6 +65,14 @@ interface Entity {
   client?: Client; // The resolved client object (optional if not always fetched)
 }
 
+interface EntitiesViewProps {
+  entities: Entity[];
+  isLoading: boolean;
+  isError: string | null;
+  onEdit?: (entityId: string) => void; // Optional: for edit action
+  onBilling?: (id: string) => void; // 👈 add this
+}
+
 interface WorkFlow {
   iD: string;
   clientId: string | null;
@@ -57,6 +83,23 @@ interface WorkFlow {
   client?: Client; // The resolved client object (optional if not always fetched)
 }
 
+interface WorkFlowsViewProps {
+  // Renamed for clarity from worFlowsViewProps
+  workFlows: WorkFlow[]; // This will be the potentially FILTERED list from the parent
+  allClientsForDropdown: Client[]; // List of all clients specifically for the dropdown population
+  isLoadingWorkflows: boolean; // Loading state for the WORKFLOWS list
+  isLoadingClients: boolean; // Loading state for the CLIENTS list (for dropdown)
+  isError: string | null;
+  currentClientIdFilter: string | null; // The ID of the client currently being filtered by (for UI state)
+  onClientFilterChange: (clientId: string | null) => void; // Callback to tell parent to change filter & refetch
+  onEditWorkflowMeta?: (workflowId: string) => void;
+  onManageWorkflowSteps: (
+    workflowId: string,
+    workflowName: string,
+    clientId: string
+  ) => void; // From previous
+}
+
 interface WorkFlowItem extends Entity {
   wiD: string;
   workFlowName: string | null;
@@ -64,35 +107,12 @@ interface WorkFlowItem extends Entity {
   // You might add workflow-specific properties here if needed in the future
 }
 
-interface AffiliatesTableProps {
-  affiliates: Affiliate[];
-  isLoading: boolean;
-  isError: string | null;
-  onEdit?: (affiliateId: string) => void; // Optional: for edit action
-  onClients?: (id: string) => void; // 👈 add this
-}
-
-interface ClientsTableProps {
+interface maintainWorkFlowTableProps {
+  WorkFlow: WorkFlow[];
   clients: Client[];
   isLoading: boolean;
   isError: string | null;
-  onEdit?: (clientId: string) => void; // Optional: for edit action
-  onEntities?: (id: string) => void; // 👈 add this
-}
-
-interface EntitiesTableProps {
-  entities: Entity[];
-  isLoading: boolean;
-  isError: string | null;
-  onEdit?: (entityId: string) => void; // Optional: for edit action
-  onBilling?: (id: string) => void; // 👈 add this
-}
-
-interface WorkFlowsTableProps {
-  workFlows: WorkFlow[];
-  isLoading: boolean;
-  isError: string | null;
-  onEditWorkFlow: (id: string) => void;
+  onSave: (id: string) => void;
 }
 
 interface BackButtonProps {
@@ -131,15 +151,20 @@ interface EditWorkFlowModalProps {
 export type {
   DashboardProps,
   NavItem,
+  // AFFILIATE TYPES
   Affiliate,
+  AffiliatesViewProps,
+  // CLIENT TYPES
   Client,
+  ClientsViewProps,
+  // ENTITY TYPES
   Entity,
+  EntitiesViewProps,
+  // WORKFLOW TYPES
   WorkFlow,
   WorkFlowItem,
-  AffiliatesTableProps,
-  ClientsTableProps,
-  EntitiesTableProps,
-  WorkFlowsTableProps,
+  WorkFlowsViewProps,
+  maintainWorkFlowTableProps,
   EditWorkFlowModalProps,
   BackButtonProps,
   ModalProps,

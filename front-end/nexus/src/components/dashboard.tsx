@@ -1,29 +1,32 @@
 // Dashboard.tsx
-import React, { useState, useEffect } from "react";
-import styles from "./dashboardStyles"; // Assuming this file exists and is correctly set up
-// ... [imports at the top remain unchanged]
-import AffiliatesTable from "./affiliatesTable"; // Assuming this component exists
-import ClientsTable from "./clientsTable"; // Assuming this component exists
-import EntitiesTable from "./entitiesTable"; // Assuming this component exists
-import WorkFlowsTable from "./WorkFlowsTable";
-import AffiliateEditForm from "./affiliateEditForm";
-import { EditWorkFlowModal } from "./editWorkFlowModal";
-import { useQuery } from "@apollo/client";
+import React, { useState, useEffect, useCallback } from "react"; // Added useCallback
+import { ApolloProvider, useQuery } from "@apollo/client"; // Group Apollo imports
+
+// --- Component Imports ---
+import AffiliatesView from "./affiliatesView";
+import ClientsView from "./clientsView";
+import EntitiesView from "./entitiesView";
+import WorkFlowsView from "./workFlowsView";
+import MaintainWorkFlowView from "./maintainWorkFlowView";
+import AffiliateEditForm from "./affiliateEditForm"; // Assuming this is used, if not, remove
+import { EditWorkFlowModal } from "./editWorkFlowModal"; // Assuming this is used
+
+// --- GraphQL & API Imports ---
+import client from "./apolloClient"; // Your Apollo client instance
 import {
+  GET_CURRENT_USER_STATUS,
   GET_MANAGE_AFFILIATES,
   GET_MANAGE_CLIENTS,
-  GET_CURRENT_USER_STATUS,
   GET_MANAGE_ENTITIES,
   GET_MANAGE_WORKFLOWS,
   GET_WORKFLOW,
 } from "./graphqlQueries";
-import type { WorkFlow } from "./interface"; // Ensure this file contains the WorkFlow type definition
-import client from "./apolloClient"; // Already imported
-import { ApolloProvider } from "@apollo/client";
-// ... [imports at the top remain unchanged]
 
+// --- Type Imports ---
+import type { NavItem, WorkFlow } from "./interface"; // Group type imports
+
+// --- Icon Imports & Assignments ---
 import {
-  PlaceholderIcon,
   HolderPowerIcon,
   HolderBackArrowIcon,
   HolderAffiliatesIcon,
@@ -34,15 +37,15 @@ import {
   HolderAddIcon,
   HolderManageIcon,
   HolderWorkFlowIcon,
-  HolderReportsIcon,
-  HolderBillingIcon,
-} from "./icons"; // Assuming this file exists and is correctly set up
-
-import type { NavItem } from "./interface"; // Assuming this file exists and is correctly set up
+  //HolderReportsIcon,
+  //HolderBillingIcon
+} from "./icons";
+import styles from "./dashboardStyles";
 
 const BackArrowIcon = HolderBackArrowIcon;
 const PowerIcon = HolderPowerIcon;
 const AffiliatesIcon = HolderAffiliatesIcon;
+// ... (Assign all other icons similarly)
 const ClientsIcon = HolderClientsIcon;
 const EntitiesIcon = HolderEntitiesIcon;
 const ChatIcon = HolderChatIcon;
@@ -50,101 +53,44 @@ const SettingsIcon = HolderSettingsIcon;
 const AddIcon = HolderAddIcon;
 const ManageIcon = HolderManageIcon;
 const WorkFlowIcon = HolderWorkFlowIcon;
-const ReportsIcon = HolderReportsIcon;
-const BillingIcon = HolderBillingIcon;
-// --- End SVG Icon Placeholders ---
+//const ReportsIcon = HolderReportsIcon;
+//const BillingIcon = HolderBillingIcon;
 
-// --- Dashboard Component ---
-const Dashboard: React.FC = () => {
-  const { loading, error, data } = useQuery(GET_CURRENT_USER_STATUS, {
-    fetchPolicy: "network-only", // Ensure it always hits the network
-    onError: (apolloError) => {
-      // The global errorLink should handle actual logout/redirect.
-      // This onError is more for component-specific error UI if needed,
-      // but often not necessary if errorLink is robust.
-      console.log(
-        "Dashboard initial auth query error (component level):",
-        apolloError
-      );
-
-      console.log(loading);
-      console.log(error);
-      console.log(data);
-    },
-  });
-
-  // --- State hooks ---
+// ========================================================================
+// Custom Hook for Dashboard Navigation & Core Logic (Conceptual)
+// In a real app, some of this might be further broken down or use Context/Redux
+// ========================================================================
+const useDashboardLogic = () => {
   const [currentLevelKey, setCurrentLevelKey] = useState<string>("root");
   const [userName, setUserName] = useState<string>("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const [isPowerButtonHovered, setIsPowerButtonHovered] = useState(false);
-  const [isPowerButtonActive, setIsPowerButtonActive] = useState(false);
-
-  // --- New state for Edit workFlow Modal ---
-  const [selectedWorkFlow, setSelectedWorkFlow] = useState<WorkFlow | null>(
+  const [selectedIdForEdit, setSelectedIdForEdit] = useState<string | null>(
     null
-  );
+  ); // For general editing, e.g., AffiliateEditForm
+
+  // --- Workflow Specific State ---
+  const [editingWorkflow, setEditingWorkflow] = useState<{
+    id: string;
+    name: string;
+    clientId: string;
+  } | null>(null);
   const [isEditWorkFlowModalOpen, setIsEditWorkFlowModalOpen] = useState(false);
+  const [selectedWorkFlowForModal, setSelectedWorkFlowForModal] =
+    useState<WorkFlow | null>(null);
 
-  const {
-    data: affiliatesData,
-    loading: affiliatesLoading,
-    error: affiliatesError,
-    refetch: refetchAffiliates,
-  } = useQuery(GET_MANAGE_AFFILIATES, {
-    skip: currentLevelKey !== "manageAffiliatesView",
-  });
+  useEffect(() => {
+    const storedUserName = localStorage.getItem("userName") || "User";
+    setUserName(storedUserName);
+  }, []);
 
-  const {
-    data: clientsData,
-    loading: clientsLoading,
-    error: clientsError,
-    refetch: refetchClients,
-  } = useQuery(GET_MANAGE_CLIENTS, {
-    skip: currentLevelKey !== "manageClientsView",
-  });
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userId");
+    client.resetStore().finally(() => window.location.reload());
+  }, []);
 
-  const {
-    data: entitiesData,
-    loading: entitiesLoading,
-    error: entitiesError,
-    refetch: refetchEntities,
-  } = useQuery(GET_MANAGE_ENTITIES, {
-    skip: currentLevelKey !== "manageEntitiesView",
-  });
-
-  const {
-    data: workFlowsData,
-    loading: workFlowsLoading,
-    error: workFlowsError,
-    refetch: refetchWorkFlows,
-  } = useQuery(GET_MANAGE_WORKFLOWS, {
-    skip: currentLevelKey !== "manageWorkFlowsView",
-  });
-
-  // Add this query to fetch a single workFlow (used by handleEditworkFlow)
-  const { refetch: refetchSingleWorkFlow } = useQuery(GET_WORKFLOW, {
-    skip: currentLevelKey !== "editworkFlowView",
-  });
-
-  const {
-    data: workFlowData,
-    loading: workFlowLoading,
-    error: workFlowError,
-    refetch: refetchWorkFlow,
-  } = useQuery(GET_WORKFLOW, {
-    variables: { id: selectedId },
-    skip: currentLevelKey !== "editWorkFlowView",
-  });
-
-  const handleEdit = (id: string) => {
-    console.log(" handleEdit - Executed");
-    setSelectedId(id);
-  };
-
-  // --- Navigation and Action Map ---
   const iconMap: { [key: string]: NavItem[] } = {
+    // Defined inside hook or passed in if static
     root: [
       {
         id: "affiliatesRoot",
@@ -165,6 +111,12 @@ const Dashboard: React.FC = () => {
         subItemsKey: "Entities",
       },
       {
+        id: "workflowRoot",
+        IconComponent: WorkFlowIcon,
+        ariaLabel: "Workflow Management",
+        action: () => setCurrentLevelKey("LoadWorkFlowsView"),
+      },
+      {
         id: "chatRoot",
         IconComponent: ChatIcon,
         ariaLabel: "Chat Menu",
@@ -182,56 +134,34 @@ const Dashboard: React.FC = () => {
         id: "addAffiliate",
         IconComponent: AddIcon,
         ariaLabel: "Add New Affiliate",
-        action: () => console.log("Trigger Add Affiliate UI"),
+        action: () => {
+          /* TODO: setCurrentLevelKey('addAffiliateView'); setSelectedIdForEdit(null); */ console.log(
+            "Add Aff"
+          );
+        },
       },
       {
         id: "manageAffiliate",
         IconComponent: ManageIcon,
         ariaLabel: "Manage Affiliates",
-        action: () => {
-          setCurrentLevelKey("manageAffiliatesView"); // Transition to table view state
-          refetchAffiliates(); // Optionally refetch
-        },
+        action: () => setCurrentLevelKey("manageAffiliatesView"),
       },
-      {
-        id: "affiliateReports",
-        IconComponent: ReportsIcon,
-        ariaLabel: "Affiliate Reports",
-        action: () => console.log("Show Affiliate Reports"),
-      },
-      {
-        id: "affiliateBilling",
-        IconComponent: BillingIcon,
-        ariaLabel: "Affiliate Billing",
-        action: () => console.log("Show Affiliate Billing"),
-      },
+      // ...
     ],
     Clients: [
       {
         id: "addClient",
         IconComponent: AddIcon,
         ariaLabel: "Add New Client",
-        action: () => console.log("Trigger Add Client UI"),
+        action: () => console.log("Add Client"),
       },
       {
         id: "manageClient",
         IconComponent: ManageIcon,
         ariaLabel: "Manage Clients",
-        action: () => {
-          setCurrentLevelKey("manageClientsView"); // Transition to table view state
-          refetchClients(); // Optionally refetch
-        },
+        action: () => setCurrentLevelKey("manageClientsView"),
       },
-      {
-        id: "manageWorkFlow",
-        IconComponent: WorkFlowIcon,
-        ariaLabel: "Manage WorkFlows",
-        action: () => {
-          setCurrentLevelKey("manageWorkFlowsView"); // Transition to table view state
-          refetchWorkFlows(); // Optionally refetch
-        },
-      },
-      // ... other client items
+      // Moved workflow access to root for this example, adjust as needed
     ],
     Entities: [
       {
@@ -244,66 +174,52 @@ const Dashboard: React.FC = () => {
         id: "manageEntity",
         IconComponent: ManageIcon,
         ariaLabel: "Manage Entities",
-        action: () => {
-          setCurrentLevelKey("manageEntitiesView"); // Transition to table view state
-          refetchEntities(); // Optionally refetch
-        },
+        action: () => setCurrentLevelKey("manageEntitiesView"),
       },
-      // ... other client items
     ],
     Chat: [
-      {
-        id: "chatHistory",
-        IconComponent: PlaceholderIcon,
-        ariaLabel: "Chat History",
-        action: () => console.log("Show Chat History"),
-      },
-      {
-        id: "liveChat",
-        IconComponent: PlaceholderIcon,
-        ariaLabel: "Ask Me Anything",
-        action: () => console.log("Open Live Chat"),
-      },
+      /* ... Chat items ... */
     ],
     Settings: [
-      {
-        id: "preferences",
-        IconComponent: PlaceholderIcon,
-        ariaLabel: "Preferences",
-        action: () => console.log("Show Preferences"),
-      },
-      {
-        id: "security",
-        IconComponent: PlaceholderIcon,
-        ariaLabel: "Security Settings",
-        action: () => console.log("Show Security Settings"),
-      },
+      /* ... Settings items ... */
     ],
-  }; // End iconMap
-
-  useEffect(() => {
-    const storedUserName = localStorage.getItem("userName") || "User"; // Default to "User"
-    setUserName(storedUserName);
-  }, []);
-
-  const handleCardClick = (item: NavItem) => {
-    if (item.action) {
-      item.action(); // Execute direct action (like showing table or logging out)
-    } else if (item.subItemsKey && iconMap[item.subItemsKey]) {
-      setCurrentLevelKey(item.subItemsKey); // Navigate to next level of cards
-    } else {
-      console.warn(
-        "NavItem clicked with no action and no valid subItemsKey:",
-        item
-      );
-    }
   };
 
-  const handleBack = () => {
-    // More sophisticated back navigation might be needed for deeper levels
-    if (iconMap[currentLevelKey] && currentLevelKey !== "root") {
-      // Find parent (this is a simple way, assumes direct parentage or root)
-      // For a true breadcrumb, you'd need a navigation stack
+  const handleCardClick = useCallback(
+    (item: NavItem) => {
+      setEditingWorkflow(null); // Reset workflow editing when navigating via cards
+      setSelectedIdForEdit(null); // Reset general editing ID
+
+      if (item.action) {
+        item.action();
+      } else if (item.subItemsKey && iconMap[item.subItemsKey]) {
+        setCurrentLevelKey(item.subItemsKey);
+      } else {
+        console.warn("NavItem clicked with no action/subItemsKey:", item);
+      }
+    },
+    [iconMap]
+  ); // iconMap might need to be memoized if generated dynamically
+
+  const handleBack = useCallback(() => {
+    setEditingWorkflow(null); // Reset workflow editing on back
+    setSelectedIdForEdit(null);
+
+    if (
+      currentLevelKey === "manageAffiliatesView" ||
+      currentLevelKey === "addAffiliateView"
+    )
+      setCurrentLevelKey("Affiliates");
+    else if (currentLevelKey === "manageClientsView")
+      setCurrentLevelKey("Clients");
+    else if (currentLevelKey === "manageEntitiesView")
+      setCurrentLevelKey("Entities");
+    else if (
+      currentLevelKey === "LoadWorkFlowsView" ||
+      currentLevelKey === "MaintainWorkFlowView"
+    )
+      setCurrentLevelKey("root"); // Or a specific "Workflow" menu if it exists
+    else if (iconMap[currentLevelKey] && currentLevelKey !== "root") {
       let parentKey = "root";
       for (const key in iconMap) {
         if (iconMap[key].some((item) => item.subItemsKey === currentLevelKey)) {
@@ -315,82 +231,293 @@ const Dashboard: React.FC = () => {
     } else {
       setCurrentLevelKey("root");
     }
-  };
+  }, [currentLevelKey, iconMap]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("authToken"); // Assuming you store auth token
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userId");
-    // Potentially redirect to login or reload to let WordPress handle auth
-    window.location.reload();
-  };
-
-  const [selectedWorkFlowId, setSelectedWorkFlowId] = useState<string | null>(
-    null
+  // --- Workflow Specific Handlers ---
+  const handleNavigateToMaintainWorkflow = useCallback(
+    (workflowId: string, workflowName: string, clientId: string) => {
+      setEditingWorkflow({ id: workflowId, name: workflowName, clientId });
+      // currentLevelKey remains 'LoadWorkFlowsView' or similar, sub-view changes
+    },
+    []
   );
 
-  /**
-   *      Returned by useQuery	   Renamed to	                    Meaning
-   *      data	                    selectedWorkFlowData	        The actual result of the query (workflow object)
-   *      loading	                  selectedWorkFlowLoading	      Boolean showing if the query is in progress
-   */
-  const { data: selectedWorkFlowData, loading: selectedWorkFlowLoading } =
-    useQuery(GET_WORKFLOW, {
-      variables: { id: selectedWorkFlowId }, //This tells Apollo to pass the selectedWorkFlowId as the id variable into your GET_WORKFLOW GraphQL query.
-      skip: !selectedWorkFlowId, // This is useful to avoid fetching until you're sure you have a valid ID.
-    });
+  const handleExitMaintainWorkflow = useCallback(() => {
+    setEditingWorkflow(null);
+  }, []);
 
-  /**
-   * @param workFlowId This function is called when the user wants to edit a specific workflow.
-   * It tries to refetch the data for that specific workflow using its ID.
-   * If the workflow is found, it stores that data in state and opens a modal so the user can edit it.
-   * If the workflow isn’t found or something goes wrong, it logs an error.
-   */
-  // --- Handler to edit a workFlow ---
-  const handleEditWorkFlow = async (workFlowId: string) => {
-    try {
-      console.log("handleEditWorkFlow - Executed.");
-      const { data } = await refetchSingleWorkFlow({ id: workFlowId });
-      if (data?.nexusWorkFlow) {
-        // Checks if the existing data (from a useQuery hook) has a .WorkFlow object.
-        setSelectedWorkFlowId(workFlowId);
-        setSelectedWorkFlow(data.nexusWorkFlow); // Stores the workflow in local state so it can be edited (setSelectedWorkFlow).
-        setIsEditWorkFlowModalOpen(true); // Opens a modal UI to show the form for editing
-        console.log("NexusWorkFlow Object: ", data?.nexusWorkFlow);
-      } else {
-        console.error("The WorkFlow not found for ID:", workFlowId);
+  const handleOpenEditWorkflowModal = useCallback(
+    async (workflowId: string) => {
+      // This refetch logic should ideally be part of a dedicated hook or service
+      // For now, keeping it simple. Ensure `client` is your Apollo Client instance.
+      try {
+        const { data } = await client.query({
+          query: GET_WORKFLOW,
+          variables: { id: workflowId },
+          fetchPolicy: "network-only", // Ensure fresh data
+        });
+        if (data?.nexusWorkFlow) {
+          setSelectedWorkFlowForModal(data.nexusWorkFlow);
+          setIsEditWorkFlowModalOpen(true);
+        } else {
+          console.error("Workflow not found for modal edit:", workflowId);
+        }
+      } catch (error) {
+        console.error("Error fetching workflow for modal edit:", error);
       }
-    } catch (error) {
-      console.error("Error fetching workFlow:", error);
+    },
+    []
+  );
+
+  const handleCloseEditWorkflowModal = useCallback(() => {
+    setIsEditWorkFlowModalOpen(false);
+    setSelectedWorkFlowForModal(null);
+  }, []);
+
+  const handleSaveWorkflowFromModal = useCallback(
+    async (updatedWorkFlow: WorkFlow) => {
+      console.log("Saving workflow from modal:", updatedWorkFlow);
+      // TODO: Implement GraphQL mutation to save workflow metadata
+      // e.g., await updateWorkflowMutation({ variables: { id: updatedWorkFlow.iD, name: updatedWorkFlow.workflowName, ... } });
+      setIsEditWorkFlowModalOpen(false);
+      setSelectedWorkFlowForModal(null);
+      // refetchWorkflows(); // Refetch the list after saving
+    },
+    [
+      /* refetchWorkflows */
+    ]
+  );
+
+  const handleSaveWorkflowSteps = useCallback(
+    async (workflowId: string, updatedSteps: any /* Define StepType[] */) => {
+      console.log(
+        "Saving workflow steps (from MaintainWorkFlowView) for:",
+        workflowId,
+        updatedSteps
+      );
+      // TODO: Implement GraphQL mutation to save workflow steps
+      // After saving, could navigate back or show success:
+      // handleExitMaintainWorkflow();
+    },
+    [
+      /* handleExitMaintainWorkflow */
+    ]
+  );
+
+  return {
+    currentLevelKey,
+    userName,
+    iconMap,
+    handleCardClick,
+    handleBack,
+    handleLogout,
+    selectedIdForEdit, // For general form editing
+    setSelectedIdForEdit, // To set which item to edit (e.g. affiliate)
+
+    // Workflow specific state and handlers
+    editingWorkflow,
+    handleNavigateToMaintainWorkflow,
+    handleExitMaintainWorkflow,
+    handleOpenEditWorkflowModal,
+    handleCloseEditWorkflowModal,
+    handleSaveWorkflowFromModal,
+    selectedWorkFlowForModal,
+    isEditWorkFlowModalOpen,
+    handleSaveWorkflowSteps,
+  };
+};
+
+// ========================================================================
+// Dashboard Component
+// ========================================================================
+const Dashboard: React.FC = () => {
+  // --- Initial Auth Check Query ---
+  const { loading: authLoading, error: authError } = useQuery(
+    GET_CURRENT_USER_STATUS,
+    {
+      fetchPolicy: "network-only",
+      onError: (apolloError) =>
+        console.log("Dashboard initial auth query error:", apolloError),
+    }
+  );
+
+  // --- Use the Custom Hook for Dashboard Logic ---
+  const {
+    currentLevelKey,
+    userName,
+    iconMap,
+    handleCardClick,
+    handleBack,
+    handleLogout,
+    selectedIdForEdit,
+    setSelectedIdForEdit, // For AffiliateEditForm example
+    editingWorkflow,
+    handleNavigateToMaintainWorkflow,
+    handleExitMaintainWorkflow,
+    handleOpenEditWorkflowModal,
+    handleCloseEditWorkflowModal,
+    handleSaveWorkflowFromModal,
+    selectedWorkFlowForModal,
+    isEditWorkFlowModalOpen,
+    handleSaveWorkflowSteps,
+  } = useDashboardLogic();
+
+  // --- State for UI elements (can also be part of useDashboardLogic if preferred) ---
+  const [isPowerButtonHovered, setIsPowerButtonHovered] = useState(false);
+  const [isPowerButtonActive, setIsPowerButtonActive] = useState(false);
+
+  // --- Data Fetching Hooks (Conditional based on currentLevelKey) ---
+  // These remain in the main component as they are tied to its rendering lifecycle based on currentLevelKey
+  const {
+    data: affiliatesData,
+    loading: affiliatesLoading,
+    error: affiliatesError,
+  } = useQuery(GET_MANAGE_AFFILIATES, {
+    skip: currentLevelKey !== "manageAffiliatesView",
+  });
+  const {
+    data: clientsData,
+    loading: clientsLoading,
+    error: clientsError,
+  } = useQuery(GET_MANAGE_CLIENTS, {
+    skip: currentLevelKey !== "manageClientsView",
+  });
+  const {
+    data: entitiesData,
+    loading: entitiesLoading,
+    error: entitiesError,
+  } = useQuery(GET_MANAGE_ENTITIES, {
+    skip: currentLevelKey !== "manageEntitiesView",
+  });
+  const {
+    data: workFlowsData,
+    loading: workFlowsLoading,
+    error: workFlowsError,
+  } = useQuery(GET_MANAGE_WORKFLOWS, {
+    skip: currentLevelKey !== "LoadWorkFlowsView" && !editingWorkflow,
+  });
+  // Note: GET_WORKFLOW for a single workflow details might be better fetched *inside* EditWorkFlowModal or MaintainWorkFlowView
+
+  // --- Render Helper for Main Content ---
+  const renderMainContent = () => {
+    if (authLoading) return <div style={styles.loader}>Authenticating...</div>;
+    if (authError)
+      return (
+        <div style={styles.errorMessage}>
+          Authentication Failed. Please try logging in again.
+        </div>
+      ); // ErrorLink should redirect
+
+    // General Edit Form (Example for Affiliates)
+    if (selectedIdForEdit && currentLevelKey === "addAffiliateView") {
+      // Assuming 'addAffiliateView' is a key
+      return (
+        <AffiliateEditForm
+          affiliateId={selectedIdForEdit}
+          onClose={() => setSelectedIdForEdit(null)}
+        />
+      );
+    }
+
+    switch (currentLevelKey) {
+      case "manageAffiliatesView":
+        return (
+          <AffiliatesView
+            affiliates={affiliatesData?.nexusAffiliates || []}
+            isLoading={affiliatesLoading}
+            isError={affiliatesError?.message}
+            onEdit={(id) => {
+              console.log("Edit Affiliate", id);
+              setSelectedIdForEdit(id);
+            }}
+            onClients={(id) => console.log("List of clients action:", id)}
+          />
+        );
+      case "manageClientsView":
+        return (
+          <ClientsView
+            clients={clientsData?.nexusClients || []}
+            isLoading={clientsLoading}
+            isError={clientsError?.message}
+            onEdit={(id) => console.log("Edit client action:", id)}
+            onEntities={(id) => console.log("List of entities for client:", id)}
+          />
+        );
+      case "manageEntitiesView":
+        return (
+          <EntitiesView
+            entities={entitiesData?.nexusEntities || []}
+            isLoading={entitiesLoading}
+            isError={entitiesError?.message}
+            onEdit={(id) => console.log("Edit entity action:", id)}
+            onBilling={(id: string) => console.log("Billing for entity:", id)}
+          />
+        );
+      case "LoadWorkFlowsView":
+        if (editingWorkflow) {
+          return (
+            <MaintainWorkFlowView
+              workflowId={editingWorkflow.id}
+              workflowName={editingWorkflow.name}
+              clientId={editingWorkflow.clientId}
+              // Pass its own loading/error states if MaintainWorkFlowView fetches its own steps
+              isLoading={false} // Replace with actual loading state for steps
+              isError={null} // Replace with actual error state for steps
+              onSave={handleSaveWorkflowSteps}
+              onBack={handleExitMaintainWorkflow}
+            />
+          );
+        }
+        return (
+          <WorkFlowsView
+            workFlows={workFlowsData?.nexusWorkFlows || []}
+            isLoading={workFlowsLoading}
+            isError={workFlowsError?.message}
+            onEdit={handleOpenEditWorkflowModal} // Opens modal for name/status
+            onManageWorkflowSteps={handleNavigateToMaintainWorkflow} // Switches to D&D editor
+          />
+        );
+      // Other cases for 'Chat', 'Settings' sub-menus can be added here
+      // Default to card navigation for 'root' or other menu levels
+      default:
+        const navItems = iconMap[currentLevelKey] || [];
+        if (navItems.length === 0 && currentLevelKey !== "root") {
+          return (
+            <div style={styles.noDataMessage}>
+              Section not implemented yet or no items for '{currentLevelKey}'.
+            </div>
+          );
+        }
+        return navItems.map((item: NavItem) => (
+          <div
+            key={item.id}
+            style={styles.dashboardCard}
+            role="button"
+            tabIndex={0}
+            aria-label={item.ariaLabel}
+            onClick={() => handleCardClick(item)}
+            // ... (rest of card interaction styles/handlers)
+          >
+            <item.IconComponent
+              style={styles.cardIcon as React.CSSProperties}
+            />
+          </div>
+        ));
     }
   };
 
-  const handleWorkFlowSave = (updatedWorkFlow: any) => {
-    console.log("Saved workFlow:", updatedWorkFlow);
-    setShowEditWorkFlowModal(false);
-    setSelectedWorkFlow(null);
-    // Update logic here if needed
-  };
-
-  const handleCloseEditWorkFlowModal = () => {
-    setShowEditWorkFlowModal(false);
-    setSelectedWorkFlow(null);
-  };
-
-  const currentNavItems = iconMap[currentLevelKey] || [];
   const isRootLevel = currentLevelKey === "root";
-
-  // Determine header title (for screen readers or minimal visual cue if any)
-  let headerTitle = "Dashboard";
-  if (!isRootLevel && iconMap[currentLevelKey]) {
-    // Try to get a conceptual title from the current level key
-    // This is a bit of a guess, for better UX, explicitly define titles
-    headerTitle = currentLevelKey;
-  }
+  const headerTitle = isRootLevel
+    ? "Dashboard"
+    : currentLevelKey
+        .replace(/View$/, "")
+        .replace(/([A-Z])/g, " $1")
+        .trim();
 
   return (
     <div style={styles.body}>
       <div style={styles.dashboardContainer}>
+        {/* Header */}
         <div style={styles.dashboardHeader}>
           <button
             style={{
@@ -401,11 +528,8 @@ const Dashboard: React.FC = () => {
             disabled={isRootLevel}
             aria-label="Go Back"
           >
-            <BackArrowIcon style={styles.headerIcon as React.CSSProperties} />{" "}
-            {/* Cast if styles are generic */}
+            <BackArrowIcon style={styles.headerIcon as React.CSSProperties} />
           </button>
-
-          {/* Display headerTitle visually */}
           <h1
             style={
               styles.headerTitle || { fontSize: "1.5rem", margin: "0 1rem" }
@@ -413,12 +537,9 @@ const Dashboard: React.FC = () => {
           >
             {headerTitle}
           </h1>
-
           <span style={styles.welcomeMessage} aria-live="polite">
-            {/* For no-text, this would be an avatar or personalized visual element */}
             Welcome, {userName}!
           </span>
-
           <div
             title="Logout"
             aria-label="Logout"
@@ -441,113 +562,26 @@ const Dashboard: React.FC = () => {
             onMouseDown={() => setIsPowerButtonActive(true)}
             onMouseUp={() => setIsPowerButtonActive(false)}
           >
-            <PowerIcon style={styles.headerIcon as React.CSSProperties} />{" "}
-            {/* Cast if styles are generic */}
+            <PowerIcon style={styles.headerIcon as React.CSSProperties} />
           </div>
         </div>
+
+        {/* Main Content Area - Now wrapped in ApolloProvider if needed by children consistently */}
+        {/* If only some children need it, wrap them individually or ensure client is passed via context */}
+        {/* For simplicity, assuming children might make their own queries or use mutations */}
         <ApolloProvider client={client}>
-          <div style={styles.dashboardMain}>
-            {selectedId && (
-              <AffiliateEditForm
-                affiliateId={selectedId}
-                onClose={handleCloseEdit}
-              />
-            )}
-            {/* Render the table or cards based on current level */}
-            {currentLevelKey == "manageAffiliatesView" ? (
-              <AffiliatesTable
-                affiliates={affiliatesData?.nexusAffiliates || []}
-                isLoading={affiliatesLoading}
-                isError={affiliatesError?.message}
-                onEdit={(id) => console.log("Edit affiliate action:", id)}
-                onClients={(id) =>
-                  console.log("List of affiliates action:", id)
-                }
-              />
-            ) : currentLevelKey == "manageClientsView" ? (
-              <ClientsTable
-                clients={clientsData?.nexusClients || []}
-                isLoading={clientsLoading}
-                isError={clientsError?.message}
-                onEdit={(id) => console.log("Edit client action:", id)}
-                onEntities={(id) => console.log("List of clients action:", id)}
-              />
-            ) : currentLevelKey == "manageEntitiesView" ? (
-              <EntitiesTable
-                entities={entitiesData?.nexusEntities || []}
-                isLoading={entitiesLoading}
-                isError={entitiesError?.message}
-                onEdit={(id) => console.log("Edit entity action:", id)}
-                onBilling={(id: string) =>
-                  console.log("List of entity billing action:", id)
-                }
-              />
-            ) : currentLevelKey == "manageWorkFlowsView" ? (
-              <>
-                <WorkFlowsTable
-                  workFlows={workFlowsData?.nexusWorkFlows || []}
-                  isLoading={workFlowsLoading}
-                  isError={workFlowsError?.message}
-                  onEdit={handleEditWorkFlow} // <-- pass it here
-                />
-                {isEditWorkFlowModalOpen && selectedWorkFlowId && (
-                  <EditWorkFlowModal
-                    workFlow={selectedWorkFlow}
-                    onClose={handleCloseEditWorkFlowModal}
-                    refetchWorkFlow={refetchWorkFlow}
-                  />
-                )}
-              </>
-            ) : (
-              <>
-                {currentNavItems.map((item: NavItem) => (
-                  <div
-                    className={item.ariaLabel.replace(/\s+/g, "")}
-                    key={item.id}
-                    style={styles.dashboardCard}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={item.ariaLabel}
-                    onClick={() => handleCardClick(item)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ")
-                        handleCardClick(item);
-                    }}
-                    // Inline style effects for hover/active (can be moved to CSS classes)
-                    onMouseDown={(e) =>
-                      (e.currentTarget.style.transform =
-                        (styles.dashboardCardActive as React.CSSProperties)
-                          ?.transform || "scale(0.98)")
-                    }
-                    onMouseUp={(e) =>
-                      (e.currentTarget.style.transform =
-                        (styles.dashboardCard as React.CSSProperties)
-                          ?.transform || "scale(1)")
-                    }
-                    onMouseEnter={(e) =>
-                      Object.assign(
-                        e.currentTarget.style,
-                        styles.dashboardCardHover
-                      )
-                    }
-                    onMouseLeave={(e) =>
-                      Object.assign(
-                        e.currentTarget.style,
-                        styles.dashboardCard as React.CSSProperties
-                      )
-                    }
-                  >
-                    <item.IconComponent
-                      style={styles.cardIcon as React.CSSProperties}
-                    />
-                    {/* If you ever need a fallback or small text label:
-                  <span style={styles.cardLabel}>{item.ariaLabel.split(' ')[0]}</span> */}
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
+          <div style={styles.dashboardMain}>{renderMainContent()}</div>
         </ApolloProvider>
+
+        {/* Edit Workflow Modal */}
+        {isEditWorkFlowModalOpen && selectedWorkFlowForModal && (
+          <EditWorkFlowModal
+            workflow={selectedWorkFlowForModal}
+            isOpen={isEditWorkFlowModalOpen}
+            onClose={handleCloseEditWorkflowModal}
+            onSave={handleSaveWorkflowFromModal}
+          />
+        )}
       </div>
     </div>
   );

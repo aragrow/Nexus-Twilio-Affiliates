@@ -1,14 +1,14 @@
 // clientsTable.tsx
 import React, { useState, useMemo } from "react";
 import clientsStyles from "./clientsStyles"; // Assuming table styles are in dashboardStyles
-import type { ClientsTableProps } from "./interface"; // Importing the client interface
+import type { ClientsViewProps } from "./interface"; // Importing the client interface
 
 const ITEMS_PER_PAGE = 15; // Or make this a prop if you want it configurable
 
-const ClientsTable: React.FC<ClientsTableProps> = ({
+const ClientsView: React.FC<ClientsViewProps> = ({
   clients,
   isLoading,
-  error,
+  isError,
   onEdit,
   onEntities,
 }) => {
@@ -16,20 +16,20 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
     return <div style={clientsStyles.loader}>Loading clients...</div>; // Style this loader
   }
 
-  if (error) {
-    return <div style={clientsStyles.errorMessage}>{error}</div>; // Style this error message
+  if (isError) {
+    return <div style={clientsStyles.errorMessage}>{isError}</div>; // Style this error message
   }
 
   if (!clients || clients.length === 0) {
     return <div style={clientsStyles.noDataMessage}>No clients found.</div>; // Style this
   }
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   // Memoize the paginated Clients to avoid re-calculating on every render
   // unless Clients or currentPage changes.
   const paginatedClients = useMemo(() => {
-    if (!clients) return [];
+    if (!clients) return [] as typeof clients;
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     return clients.slice(startIndex, endIndex);
@@ -89,8 +89,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
         <table style={clientsStyles.table}>
           <thead style={clientsStyles.tableHead}>
             <tr>
-              <th style={clientsStyles.tableHeader}>Client Name</th>
-              <th style={clientsStyles.tableHeader}>Client Account</th>
+              <th style={clientsStyles.tableHeader}>Affiliate Name</th>
               <th style={clientsStyles.tableHeader}>Client Name</th>
               <th style={clientsStyles.tableHeader}>Client Phone</th>
               <th style={clientsStyles.tableHeader}>Status</th>
@@ -104,14 +103,11 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
           <tbody style={clientsStyles.tableBody}>
             {paginatedClients.map((client) => (
               <tr key={client.iD} style={clientsStyles.tableRow}>
-                <td style={clientsStyles.tableCell} data-label="Client Name:">
-                  {client.Client?.companyName || "N/A"}
-                </td>
                 <td
                   style={clientsStyles.tableCell}
-                  data-label="Client Account:"
+                  data-label="Affiliate Name:"
                 >
-                  {client.accountno || "N/A"}
+                  {client.affiliate?.companyName || "N/A"}
                 </td>
                 <td style={clientsStyles.tableCell} data-label="Client Name:">
                   {client.clientName || "N/A"}
@@ -234,4 +230,4 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
   );
 };
 
-export default ClientsTable;
+export default ClientsView;
