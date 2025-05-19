@@ -2,7 +2,10 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import workFlowsStyles from "./workFlowsStyles"; // Assuming table styles are in dashboardStyles
 import type { Client, WorkFlowsViewProps } from "./interface"; // Importing the client interface
-import { GET_MANAGE_CLIENTS } from "./graphqlQueries"; // Adjust path to your query
+// --- GraphQL & API Imports ---
+import client from "./apolloClient"; // Your Apollo client instance
+import { GET_CLIENTS_NAME } from "./graphqlQueries"; // Adjust path to your query
+import { ApolloProvider, useQuery } from "@apollo/client"; // Group Apollo imports
 
 const ITEMS_PER_PAGE = 15; // Or make this a prop if you want it configurable
 
@@ -34,42 +37,91 @@ const worFlowsView: React.FC<WorkFlowsViewProps> = ({
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
   const [isClientSearchLoading, setIsClientSearchLoading] = useState(false); // For search loading
 
-  // --- Mock API for client search (replace with actual API call) ---
-  const searchClientsAPI = useCallback(
-    async (term: string): Promise<Client[]> => {
-      if (term.length < 2) return []; // Min 2 chars to search
-      setIsClientSearchLoading(true);
-      console.log("API: Searching clients for", term);
-      await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate network delay
-      const mockClients: Client[] = [
-        { iD: "client-1", clientName: "Alpha Corp Widgets" },
-        { iD: "client-2", clientName: "Beta Industries Global" },
-        { iD: "client-3", clientName: "Gamma Solutions Ltd" },
-        { iD: "client-4", clientName: "Delta Innovations Inc" },
-        { iD: "client-5", clientName: "Epsilon Services Co." },
-      ];
-      const results = mockClients.filter((c) =>
-        c.clientName.toLowerCase().includes(term.toLowerCase())
-      );
-      setIsClientSearchLoading(false);
-      return results;
-    },
-    []
-  );
+  const { data } = useQuery(GET_CLIENTS_NAME, {
+    fetchPolicy: "network-only", // Ensure fresh data
+  });
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      console.log("Data fetched:", data);
+    }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, [data]);
 
   useEffect(() => {
+    // This function will run after every render IF any of the values in the
+    // dependency array [clientSearchTerm, data, isClientDropdownOpen] have changed.
+
+    // 1. Condition to start searching: Only if the search term is at least 2 characters long.
     if (clientSearchTerm.length >= 2) {
+      // 2. Debouncing: Set up a timer. The actual search/filter logic will only run
+      //    after the user has stopped typing for 300 milliseconds.
       const handler = setTimeout(() => {
-        searchClientsAPI(clientSearchTerm).then(setClientSearchResults);
-      }, 500); // Debounce
+        // This code block executes after 300ms of no change in clientSearchTerm (or data/isClientDropdownOpen)
+
+        // 3. Check if data exists: Ensure `data` and `data.nexusclients` (should be nexusClients) are available.
+        //    `data` likely comes from a parent component or a data fetching hook (like Apollo Client's useQuery)
+        //    and contains the full list of clients to be filtered.
+        if (data && data.nexusClients) {
+          // Corrected: data.nexusClients (assuming camelCase from GraphQL)
+
+          // 4. Client-side filtering:
+          //    Iterate over the `data.nexusClients` array.
+          //    For each `client` object in the array:
+          //      - Get `client.clientName`.
+          //      - Convert both `clientName` and `clientSearchTerm` to lowercase for case-insensitive comparison.
+          //      - Check if the lowercase `clientName` includes the lowercase `clientSearchTerm`.
+          //    The `filter` method creates a new array containing only the clients that match.
+          const results =
+            data.nexusClients.filter(
+              (
+                client: Client // Explicitly type client if needed
+              ) =>
+                client.clientName
+                  .toLowerCase()
+                  .includes(clientSearchTerm.toLowerCase())
+            ) || []; // If data.nexusClients is somehow null/undefined after the check, default to empty array.
+
+          // 5. Update state with filtered results:
+          //    This will cause the component to re-render and display the `results`
+          //    in the search dropdown.
+          setClientSearchResults(results);
+        }
+        // Note: If `data` or `data.nexusClients` is not available when the timeout executes,
+        // nothing happens within this `if` block, and clientSearchResults won't be updated.
+      }, 300); // Debounce delay of 300 milliseconds
+
+      // 6. Cleanup function: This is crucial for debouncing.
+      //    If `clientSearchTerm` (or `data`/`isClientDropdownOpen`) changes AGAIN before the 300ms timeout completes,
+      //    this cleanup function will be called.
+      //    `clearTimeout(handler)` cancels the previously scheduled timeout.
+      //    This prevents the filtering logic from running for every keystroke, only for the "settled" search term.
       return () => clearTimeout(handler);
     } else {
-      setClientSearchResults([]);
-      if (isClientDropdownOpen) setIsClientDropdownOpen(false); // Close if term too short
+      // 7. Handle short or empty search terms:
+      //    If `clientSearchTerm` is less than 2 characters long (or empty).
+      setClientSearchResults([]); // Clear any previous search results.
+
+      // 8. Close dropdown if term is too short:
+      //    If the dropdown is currently open and the search term becomes too short, close it.
+      if (isClientDropdownOpen) setIsClientDropdownOpen(false);
     }
-  }, [clientSearchTerm, searchClientsAPI, isClientDropdownOpen]);
+    // 9. Dependency Array:
+    //    This useEffect hook will re-run whenever any of these values change:
+    //    - `clientSearchTerm`: The user types in the search input.
+    //    - `data`: The source data (full list of clients) changes. This ensures filtering re-runs if the underlying data updates.
+    //    - `isClientDropdownOpen`: If the dropdown's open state changes, the effect re-evaluates.
+    //      (Consider if `isClientDropdownOpen` is truly needed here. Usually, the primary trigger is `clientSearchTerm` and `data`.)
+  }, [
+    clientSearchTerm,
+    data,
+    isClientDropdownOpen,
+    setClientSearchResults,
+    setIsClientDropdownOpen,
+  ]); // Added missing state setters to dependency array based on usage
 
   const handleClientSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("handleClientSearchChange - Executed");
     const term = e.target.value;
     setClientSearchTerm(term);
     if (term.length >= 2) {

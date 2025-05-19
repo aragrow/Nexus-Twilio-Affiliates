@@ -27,6 +27,15 @@ export const GET_MANAGE_CLIENTS = gql`
   }
 `;
 
+export const GET_CLIENTS_NAME = gql`
+  query GetClientsNamd {
+    nexusClients {
+      iD
+      clientName
+    }
+  }
+`;
+
 export const GET_MANAGE_ENTITIES = gql`
   query GetManageEntities {
     nexusEntities {

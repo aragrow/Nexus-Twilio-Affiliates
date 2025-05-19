@@ -61,6 +61,7 @@ const workFlowsStyles: { [key: string]: React.CSSProperties } = {
     boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
   },
   searchResultItem: {
+    color: '#D4A017',
     padding: '10px 15px',
     cursor: 'pointer',
     borderBottom: '1px solid var(--ui-element-bg, #444)',
