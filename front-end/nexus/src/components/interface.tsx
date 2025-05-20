@@ -101,9 +101,9 @@ interface WorkFlowsViewProps {
 }
 
 interface WorkFlowItem extends Entity {
-  workflowItemId: string; // The ID of the nexus_workflow_entities row
-  workflowOrder: number;
-  isActiveInWorkflow: boolean; // Or your stepStatus equivalent
+  wiD: string;
+  workFlowName: string | null;
+  workFlowOrder: string | null;
   // You might add workflow-specific properties here if needed in the future
 }
 
@@ -113,17 +113,6 @@ interface maintainWorkFlowTableProps {
   isLoading: boolean;
   isError: string | null;
   onSave: (id: string) => void;
-}
-
-interface WorkflowBuilderProps {
-  clientId: string | null; // The ID of the client whose entities are available
-  workflowId: string | null; // The ID of the workflow being edited
-  // Add onSave, onBack, etc. callbacks as needed
-  onSaveWorkflowSteps: (
-    workflowId: string,
-    steps: WorkFlowItem[]
-  ) => Promise<void>;
-  onBack: () => void;
 }
 
 interface BackButtonProps {
@@ -175,7 +164,6 @@ export type {
   WorkFlow,
   WorkFlowItem,
   WorkFlowsViewProps,
-  WorkflowBuilderProps,
   maintainWorkFlowTableProps,
   EditWorkFlowModalProps,
   BackButtonProps,

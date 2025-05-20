@@ -10,12 +10,12 @@ import {
 
 // Define the props this component now expects from its parent
 interface WorkFlowsViewProps {
+  // These are actions the parent component (e.g., Dashboard) will handle
   onEditWorkflowMeta: (workflowId: string) => void;
-  // Ensure this callback signature matches what the parent expects
   onManageWorkflowSteps: (
     workflowId: string,
-    workflowName: string, // Pass name for the editor's header
-    clientId: string // Pass clientID for fetching available entities in editor
+    workflowName: string,
+    clientId: string
   ) => void;
 }
 
@@ -386,7 +386,13 @@ const WorkFlowsView: React.FC<WorkFlowsViewProps> = ({
                   <td style={workFlowsStyles.tableCell} data-label="Actions:">
                     <button
                       style={workFlowsStyles.actionButton}
-                      onClick={() => onManageWorkflowSteps(workflow.iD)}
+                      onClick={() =>
+                        onManageWorkflowSteps(
+                          workflow.iD,
+                          workflow.workflowName,
+                          workflow.clientId
+                        )
+                      }
                       aria-label={`Manage steps for ${
                         workflow.workflowName || "workflow"
                       }`}
