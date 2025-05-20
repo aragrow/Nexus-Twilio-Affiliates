@@ -7,12 +7,12 @@ const workFlowsStyles: { [key: string]: React.CSSProperties } = {
       margin: '0px 0',
       backgroundColor: 'rgba(255, 255, 255, 0.05)', // Dark theme table bg
       borderRadius: '8px',
-      padding: '1px'
+      padding: '1px',
   },
   // --- Client Search Dropdown ---
   clientSearchContainer: {
     position: 'relative', // For dropdown positioning
-    marginBottom: '20px',
+    marginBottom: '10px',
     display: 'flex', // To align input and clear button
     alignItems: 'center',
   },

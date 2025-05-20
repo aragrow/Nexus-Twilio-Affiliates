@@ -95,7 +95,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundSize: 'cover',
     display: 'flex',
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'top',
     flexWrap: 'wrap',
     gap: '2rem',
     padding: '1rem',
