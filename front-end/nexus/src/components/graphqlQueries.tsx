@@ -159,6 +159,46 @@ export const GET_MANAGE_ENTITIES = gql`
   }
 `;
 
+export const GET_NEXUS_ENTITIES_BY_CLIENT = gql`
+  query GetNexusEntitiesByClient($clientId: ID, $workFlowId: ID) {
+    nexusEntites(clientId: $clientId, workFlowId: $workFlowId) {
+      nexusEntities {
+        entityType
+        iD
+        ratePerMinute
+        clientId
+        entityName
+        entityPhone
+        entityStatus
+        createdAt
+        client {
+          clientName
+        }
+      }
+    }
+  }
+`;
+
+export const GET_NEXUS_ENTITIES_BY_WORKFLOW = gql`
+  query GetNexusEntitiesByWorkFlow($workflowId: ID) {
+    nexusEntities(workflowId: $workFlowId) {
+      nexusEntities {
+        entityType
+        iD
+        ratePerMinute
+        clientId
+        entityName
+        entityPhone
+        entityStatus
+        createdAt
+        client {
+          clientName
+        }
+      }
+    }
+  }
+`;
+
 export const GET_MANAGE_WORKFLOWS = gql`
   query GetManageWorkFlows {
     nexusWorkFlows {

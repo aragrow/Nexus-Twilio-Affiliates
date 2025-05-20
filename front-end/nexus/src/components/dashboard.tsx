@@ -6,11 +6,11 @@ import { ApolloProvider, useQuery } from "@apollo/client"; // Group Apollo impor
 import AffiliatesView from "./affiliatesView";
 import ClientsView from "./clientsView";
 import EntitiesView from "./entitiesView";
-import WorkFlowsView from "./workFlowsView";
+import WorkFlowsView from "./workflowManager/WorkFlowsView";
 import MaintainWorkFlowView from "./maintainWorkFlowView";
 import AffiliateEditForm from "./affiliateEditForm"; // Assuming this is used, if not, remove
+//import WorkFlowBuilderView from ".workFlowBuilderView";
 import { EditWorkFlowModal } from "./editWorkFlowModal"; // Assuming this is used
-
 // --- GraphQL & API Imports ---
 import client from "./apolloClient"; // Your Apollo client instance
 import {
@@ -465,6 +465,17 @@ const Dashboard: React.FC = () => {
               isError={null} // Replace with actual error state for steps
               onSave={handleSaveWorkflowSteps}
               onBack={handleExitMaintainWorkflow}
+            />
+          );
+        }
+        if (stepWorkFlow) {
+          return (
+            <WorkFlowBuilderView // Your Drag-and-Drop component
+              workflowId={workflowToEdit.id}
+              workflowName={workflowToEdit.name}
+              clientId={workflowToEdit.clientId} // Pass client ID for fetching available entities
+              onSave={handleSaveWorkflowSteps}
+              onBack={handleBackToListFromEditor}
             />
           );
         }
