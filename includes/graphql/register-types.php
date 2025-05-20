@@ -236,7 +236,7 @@ class NexusGraphQLTypeRegistrar
                     'resolve' => fn($row) => !empty($row->ID) ? (int) $row->ID : null,
                 ],
                 'clientId' => [
-                    'type' => 'Int',
+                    'type' => 'ID',
                     'description' => __('The ID of the client this entity belongs to', 'nexus-twilio-affiliates'),
                     'resolve' => fn($row) => !empty($row->client_id) ? (int) $row->client_id : null,
                 ],
@@ -424,7 +424,7 @@ class NexusGraphQLTypeRegistrar
                     'resolve'     => fn($row) => !empty($row->ID) ? (int) $row->ID : null,
                 ],
                 'clientId' => [
-                    'type'        => 'Int',
+                    'type'        => 'ID',
                     'description' => __('ID of the client this workflow belongs to', 'nexus-twilio-affiliates'),
                     'resolve'     => fn($row) => !empty($row->client_id) ? (int) $row->client_id : null,
                 ],
@@ -502,6 +502,7 @@ class NexusGraphQLTypeRegistrar
                 'wpUserId' => ['type' => 'Int'] // Allow filtering by wpUserId
             ],
             'resolve'     => function ($root, $args, $context, $info) use ($table_name_affiliates, $wpdb) {
+                error_log('RootQuery -> nexusAffiliates - Executed.');
                 $sql = "SELECT * FROM $table_name_affiliates";
                 $where_clauses = [];
                 $params = [];
@@ -546,8 +547,10 @@ class NexusGraphQLTypeRegistrar
                 'offset' => ['type' => 'Int', 'defaultValue' => 0],
                 'status' => ['type' => 'String'],
                 'affiliateId' => ['type' => 'Int'], // Filter by parent affiliate ID
+                'term' => ['type' => 'string'],
             ],
             'resolve'     => function ($root, $args, $context, $info) use ($table_name_clients, $wpdb) {
+                error_log('RootQuery -> nexusClients - Executed.');
                 $sql = "SELECT * FROM $table_name_clients";
                 $where_clauses = [];
                 $params = [];
@@ -561,6 +564,11 @@ class NexusGraphQLTypeRegistrar
                     $params[] = absint($args['affiliateId']);
                 }
 
+                if (!empty($args['term'])) {
+                    $where_clauses[] = "client_name like '%s'";
+                    $params[] = "%{$args['term']}%";
+                }
+
                 if (count($where_clauses) > 0) {
                     $sql .= " WHERE " . implode(" AND ", $where_clauses);
                 }
@@ -570,7 +578,9 @@ class NexusGraphQLTypeRegistrar
                 $params[] = absint($args['offset']);
 
                 $prepared_sql = $wpdb->prepare($sql, ...$params);
-                return $wpdb->get_results($prepared_sql) ?: [];
+                $results =  $wpdb->get_results($prepared_sql) ?: [];
+                $wpdb->last_query;
+                return $results;
             },
         ]);
 
@@ -592,12 +602,14 @@ class NexusGraphQLTypeRegistrar
             'args' => [
                 'first' => ['type' => 'Int', 'defaultValue' => 100],
                 'offset' => ['type' => 'Int', 'defaultValue' => 0],
-                'clientId' => ['type' => 'Int', 'description' => 'Filter by client ID'],
+                'clientId' => ['type' => 'ID', 'description' => 'Filter by client ID'],
                 'entityType' => ['type' => 'String'],
                 'entityStatus' => ['type' => 'String'],
                 'entityPhone' => ['type' => 'String'],
             ],
             'resolve' => function ($root, $args, $context, $info) use ($table_name_entities, $wpdb) {
+
+                error_log('RootQuery -> nexusEntities - Executed.');
                 $sql = "SELECT * FROM $table_name_entities";
                 $where_clauses = [];
                 $params = [];
@@ -625,6 +637,7 @@ class NexusGraphQLTypeRegistrar
                 $sql .= " ORDER BY entity_name ASC LIMIT %d OFFSET %d"; // DB typo
                 $params[] = absint($args['first']);
                 $params[] = absint($args['offset']);
+
 
                 return $wpdb->get_results($wpdb->prepare($sql, ...$params)) ?: [];
             }
@@ -703,36 +716,47 @@ class NexusGraphQLTypeRegistrar
             'args'        => [
                 'first' => ['type' => 'Int', 'defaultValue' => 100],
                 'offset' => ['type' => 'Int', 'defaultValue' => 0],
-                'clientId' => ['type' => 'Int'],
+                'clientId' => ['type' => 'ID'],
                 'workFlowName' => ['type' => 'String'],
                 'workFlowStatus' => ['type' => 'String']
             ],
             'resolve'     => function ($root, $args) use ($table_name_workflows, $table_name_clients, $wpdb) {
-                $sql = "SELECT * FROM $table_name_workflows";
+
+                error_log('RootQuery -> nexusWorkFlows - Executed.');
+                $sql = "SELECT *, b.client_name FROM $table_name_workflows JOIN $table_name_clients b ON b.ID = client_id";
                 $where_clauses = [];
                 $params = [];
 
                 if (!empty($args['clientId'])) {
-                    $where_clauses[] = "a.client_id = %d";
+                    $where_clauses[] = "client_id = %d";
                     $params[] = absint($args['clientId']);
                 }
                 if (!empty($args['workFlowName'])) {
-                    $where_clauses[] = "a.workflow_name = %s";
+                    $where_clauses[] = "workflow_name = %s";
                     $params[] = sanitize_text_field($args['workFlowName']);
                 }
                 if (!empty($args['workFlowStatus'])) {
-                    $where_clauses[] = "a.workflow_status = %s";
+                    $where_clauses[] = "workflow_status = %s";
                     $params[] = sanitize_text_field($args['workFlowStatus']);
                 }
 
                 if (count($where_clauses) > 0) {
                     $sql .= " WHERE " . implode(" AND ", $where_clauses);
                 }
-                $sql .= " ORDER BY workflow_name ASC LIMIT %d OFFSET %d";
+                $sql .= " ORDER BY b.client_name ASC, workflow_name ASC LIMIT %d OFFSET %d";
                 $params[] = absint($args['first']);
                 $params[] = absint($args['offset']);
 
-                return $wpdb->get_results($wpdb->prepare($sql, ...$params)) ?: [];
+                $prepared_sql = $wpdb->prepare($sql, ...$params);
+                $results = $wpdb->get_results($prepared_sql) ?: [];
+                error_log($wpdb->last_query);
+                if ($wpdb->last_error) {
+                    error_log("GraphQL nexusWorkflows Error: " . $wpdb->last_error . " | SQL: " . $prepared_sql);
+                    // Optionally throw new \GraphQL\Error\UserError('Failed to fetch workflows.');
+                    return []; // Return empty on DB error
+                }
+
+                return $results ?: [];
             },
         ]);
 

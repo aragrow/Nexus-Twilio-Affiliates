@@ -7,7 +7,7 @@ const workFlowsStyles: { [key: string]: React.CSSProperties } = {
       margin: '0px 0',
       backgroundColor: 'rgba(255, 255, 255, 0.05)', // Dark theme table bg
       borderRadius: '8px',
-      padding: '1px',
+      padding: '1px'
   },
   // --- Client Search Dropdown ---
   clientSearchContainer: {
@@ -22,8 +22,8 @@ const workFlowsStyles: { [key: string]: React.CSSProperties } = {
     fontSize: '1rem',
     border: '1px solid var(--ui-element-bg, #444)', // Darker border
     borderRadius: 'var(--ui-border-radius-sm, 4px)',
-    backgroundColor: 'var(--ui-bg-color, #1a1d24)', // Main background or slightly lighter
-    color: 'var(--ui-text-color-light, #e0e0e0)',
+    backgroundColor: 'var(--ui-bg-color-light, #1a1d24)', // Main background or slightly lighter
+    color: 'var(--ui-text-color-light,rgb(240, 240, 106))',
     boxSizing: 'border-box',
     outline: 'none',
     transition: 'border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
