@@ -63,6 +63,8 @@ interface Entity {
   createdAt: string | null;
   updatedAt: string | null;
   client?: Client; // The resolved client object (optional if not always fetched)
+  // For dnd and consistency, you might add 'id' if it's not the same as 'iD'
+  id?: string; // if 'id' is different from 'iD' or you want to ensure it exists
 }
 
 interface EntitiesViewProps {
@@ -148,6 +150,32 @@ interface EditWorkFlowModalProps {
   initialData?: WorkFlowForm; // Optional initial data for editing
 }
 
+interface WorkFlowStep extends Entity {
+  // A step can extend Entity if it shares common fields
+  order: number;
+  // any other step-specific properties like configuration, etc.
+  // For simplicity, we assume a step is just an ordered Entity for now.
+  // Entity already has: iD, clientId, entityType, entityName, etc.
+}
+
+interface WorkFlowStepInput {
+  // For GQL mutation to save steps
+  entityId: string; // The ID of the entity that forms this step
+  order: number;
+  // any other configuration for this step if needed
+}
+
+interface WorkFlowStepEditorProps {
+  workflowId: string;
+  workflowName: string;
+  clientId: string; // Context for which client this workflow belongs to
+  onSave: (
+    workflowId: string,
+    updatedSteps: WorkFlowStepInput[]
+  ) => Promise<void>; // Async save handler
+  onBack: () => void; // Handler to go back to the previous view
+}
+
 export type {
   DashboardProps,
   NavItem,
@@ -164,6 +192,9 @@ export type {
   WorkFlow,
   WorkFlowItem,
   WorkFlowsViewProps,
+  WorkFlowStep,
+  WorkFlowStepInput,
+  WorkFlowStepEditorProps,
   maintainWorkFlowTableProps,
   EditWorkFlowModalProps,
   BackButtonProps,

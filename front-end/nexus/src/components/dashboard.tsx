@@ -1,31 +1,33 @@
-// Dashboard.tsx
-import React, { useState, useEffect, useCallback } from "react"; // Added useCallback
-import { ApolloProvider, useQuery } from "@apollo/client"; // Group Apollo imports
+// src/components/dashboard.tsx
+import React, { useState, useEffect, useCallback } from "react";
+import { ApolloProvider, useQuery /* useMutation */ } from "@apollo/client"; // Added useMutation if you were to implement real save
 
 // --- Component Imports ---
 import AffiliatesView from "./affiliatesView";
 import ClientsView from "./clientsView";
 import EntitiesView from "./entitiesView";
 import WorkFlowsView from "./workFlowsView";
-import MaintainWorkFlowView from "./maintainWorkFlowView";
-import AffiliateEditForm from "./affiliateEditForm"; // Assuming this is used, if not, remove
-import { EditWorkFlowModal } from "./editWorkFlowModal"; // Assuming this is used
+// import MaintainWorkFlowView from "./maintainWorkFlowView"; // No longer used for steps
+import WorkFlowStepEditor from "./WorkFlowStepEditor"; // <--- IMPORT NEW COMPONENT
+import AffiliateEditForm from "./affiliateEditForm";
+import { EditWorkFlowModal } from "./editWorkFlowModal";
 
 // --- GraphQL & API Imports ---
-import client from "./apolloClient"; // Your Apollo client instance
+import client from "./apolloClient";
 import {
   GET_CURRENT_USER_STATUS,
   GET_MANAGE_AFFILIATES,
   GET_MANAGE_CLIENTS,
   GET_MANAGE_ENTITIES,
-  GET_MANAGE_WORKFLOWS,
-  GET_WORKFLOW,
+  GET_MANAGE_WORKFLOWS, // This is for the list view
+  GET_WORKFLOW, // This is for editing workflow metadata (name, status)
+  // UPDATE_WORKFLOW_STEPS, // Placeholder for actual GQL mutation
 } from "./graphqlQueries";
 
 // --- Type Imports ---
-import type { NavItem, WorkFlow } from "./interface"; // Group type imports
+import type { NavItem, WorkFlow, WorkFlowStepInput } from "./interface"; // Added WorkFlowStepInput
 
-// --- Icon Imports & Assignments ---
+// ... (Icon imports and assignments remain the same) ...
 import {
   HolderPowerIcon,
   HolderBackArrowIcon,
@@ -37,15 +39,12 @@ import {
   HolderAddIcon,
   HolderManageIcon,
   HolderWorkFlowIcon,
-  //HolderReportsIcon,
-  //HolderBillingIcon
 } from "./icons";
 import styles from "./dashboardStyles";
 
 const BackArrowIcon = HolderBackArrowIcon;
 const PowerIcon = HolderPowerIcon;
 const AffiliatesIcon = HolderAffiliatesIcon;
-// ... (Assign all other icons similarly)
 const ClientsIcon = HolderClientsIcon;
 const EntitiesIcon = HolderEntitiesIcon;
 const ChatIcon = HolderChatIcon;
@@ -53,21 +52,17 @@ const SettingsIcon = HolderSettingsIcon;
 const AddIcon = HolderAddIcon;
 const ManageIcon = HolderManageIcon;
 const WorkFlowIcon = HolderWorkFlowIcon;
-//const ReportsIcon = HolderReportsIcon;
-//const BillingIcon = HolderBillingIcon;
 
 // ========================================================================
-// Custom Hook for Dashboard Navigation & Core Logic (Conceptual)
-// In a real app, some of this might be further broken down or use Context/Redux
+// Custom Hook for Dashboard Navigation & Core Logic
 // ========================================================================
 const useDashboardLogic = () => {
   const [currentLevelKey, setCurrentLevelKey] = useState<string>("root");
   const [userName, setUserName] = useState<string>("");
   const [selectedIdForEdit, setSelectedIdForEdit] = useState<string | null>(
     null
-  ); // For general editing, e.g., AffiliateEditForm
+  );
 
-  // --- Workflow Specific State ---
   const [editingWorkflow, setEditingWorkflow] = useState<{
     id: string;
     name: string;
@@ -90,7 +85,6 @@ const useDashboardLogic = () => {
   }, []);
 
   const iconMap: { [key: string]: NavItem[] } = {
-    // Defined inside hook or passed in if static
     root: [
       {
         id: "affiliatesRoot",
@@ -135,9 +129,9 @@ const useDashboardLogic = () => {
         IconComponent: AddIcon,
         ariaLabel: "Add New Affiliate",
         action: () => {
-          /* TODO: setCurrentLevelKey('addAffiliateView'); setSelectedIdForEdit(null); */ console.log(
+          console.log(
             "Add Aff"
-          );
+          ); /* TODO: setCurrentLevelKey('addAffiliateView'); setSelectedIdForEdit(null); */
         },
       },
       {
@@ -146,7 +140,6 @@ const useDashboardLogic = () => {
         ariaLabel: "Manage Affiliates",
         action: () => setCurrentLevelKey("manageAffiliatesView"),
       },
-      // ...
     ],
     Clients: [
       {
@@ -161,7 +154,6 @@ const useDashboardLogic = () => {
         ariaLabel: "Manage Clients",
         action: () => setCurrentLevelKey("manageClientsView"),
       },
-      // Moved workflow access to root for this example, adjust as needed
     ],
     Entities: [
       {
@@ -187,9 +179,8 @@ const useDashboardLogic = () => {
 
   const handleCardClick = useCallback(
     (item: NavItem) => {
-      setEditingWorkflow(null); // Reset workflow editing when navigating via cards
-      setSelectedIdForEdit(null); // Reset general editing ID
-
+      setEditingWorkflow(null);
+      setSelectedIdForEdit(null);
       if (item.action) {
         item.action();
       } else if (item.subItemsKey && iconMap[item.subItemsKey]) {
@@ -199,10 +190,10 @@ const useDashboardLogic = () => {
       }
     },
     [iconMap]
-  ); // iconMap might need to be memoized if generated dynamically
+  ); // iconMap is stable if defined outside or memoized
 
   const handleBack = useCallback(() => {
-    setEditingWorkflow(null); // Reset workflow editing on back
+    setEditingWorkflow(null);
     setSelectedIdForEdit(null);
 
     if (
@@ -215,10 +206,10 @@ const useDashboardLogic = () => {
     else if (currentLevelKey === "manageEntitiesView")
       setCurrentLevelKey("Entities");
     else if (
-      currentLevelKey === "LoadWorkFlowsView" ||
-      currentLevelKey === "MaintainWorkFlowView"
+      currentLevelKey ===
+      "LoadWorkFlowsView" /* Removed MaintainWorkFlowView condition directly */
     )
-      setCurrentLevelKey("root"); // Or a specific "Workflow" menu if it exists
+      setCurrentLevelKey("root");
     else if (iconMap[currentLevelKey] && currentLevelKey !== "root") {
       let parentKey = "root";
       for (const key in iconMap) {
@@ -233,28 +224,26 @@ const useDashboardLogic = () => {
     }
   }, [currentLevelKey, iconMap]);
 
-  // --- Workflow Specific Handlers ---
   const handleNavigateToMaintainWorkflow = useCallback(
     (workflowId: string, workflowName: string, clientId: string) => {
       setEditingWorkflow({ id: workflowId, name: workflowName, clientId });
-      // currentLevelKey remains 'LoadWorkFlowsView' or similar, sub-view changes
+      // currentLevelKey remains 'LoadWorkFlowsView', the content within it changes
     },
     []
   );
 
   const handleExitMaintainWorkflow = useCallback(() => {
     setEditingWorkflow(null);
+    // currentLevelKey should remain 'LoadWorkFlowsView' to show the list again
   }, []);
 
   const handleOpenEditWorkflowModal = useCallback(
     async (workflowId: string) => {
-      // This refetch logic should ideally be part of a dedicated hook or service
-      // For now, keeping it simple. Ensure `client` is your Apollo Client instance.
       try {
         const { data } = await client.query({
           query: GET_WORKFLOW,
           variables: { id: workflowId },
-          fetchPolicy: "network-only", // Ensure fresh data
+          fetchPolicy: "network-only",
         });
         if (data?.nexusWorkFlow) {
           setSelectedWorkFlowForModal(data.nexusWorkFlow);
@@ -276,32 +265,70 @@ const useDashboardLogic = () => {
 
   const handleSaveWorkflowFromModal = useCallback(
     async (updatedWorkFlow: WorkFlow) => {
-      console.log("Saving workflow from modal:", updatedWorkFlow);
-      // TODO: Implement GraphQL mutation to save workflow metadata
-      // e.g., await updateWorkflowMutation({ variables: { id: updatedWorkFlow.iD, name: updatedWorkFlow.workflowName, ... } });
+      // This is for metadata (name, status)
+      console.log("Saving workflow metadata from modal:", updatedWorkFlow);
+      // TODO: Implement GQL mutation for workflow metadata
+      // e.g., await updateWorkflowMetadataMutation({ variables: { ... } });
       setIsEditWorkFlowModalOpen(false);
       setSelectedWorkFlowForModal(null);
-      // refetchWorkflows(); // Refetch the list after saving
+      // Consider refetching GET_MANAGE_WORKFLOWS if WorkFlowsView doesn't do it automatically
     },
-    [
-      /* refetchWorkflows */
-    ]
+    []
   );
 
+  // --- Placeholder for actual GQL mutation hook ---
+  // const [updateWorkflowStepsMutation, { loading: isSavingSteps, error: saveStepsError }] =
+  //   useMutation(UPDATE_WORKFLOW_STEPS);
+
   const handleSaveWorkflowSteps = useCallback(
-    async (workflowId: string, updatedSteps: any /* Define StepType[] */) => {
+    async (workflowId: string, updatedSteps: WorkFlowStepInput[]) => {
       console.log(
-        "Saving workflow steps (from MaintainWorkFlowView) for:",
+        "Dashboard: Attempting to save steps for workflow:",
         workflowId,
         updatedSteps
       );
-      // TODO: Implement GraphQL mutation to save workflow steps
-      // After saving, could navigate back or show success:
-      // handleExitMaintainWorkflow();
+      // --- THIS IS WHERE YOU'D CALL YOUR ACTUAL GQL MUTATION ---
+      // try {
+      //   setIsSavingSteps(true); // You'd need state for this
+      //   const { data } = await updateWorkflowStepsMutation({
+      //     variables: { workflowId, steps: updatedSteps },
+      //     // May need to refetch GET_WORKFLOW_STEPS or update Apollo cache manually
+      //     // or refetch GET_MANAGE_WORKFLOWS if step count/summary changes
+      //   });
+      //   console.log("Workflow steps saved successfully via GQL:", data);
+      //   alert("Workflow steps saved successfully!"); // Replace with a proper notification
+      //   handleExitMaintainWorkflow(); // Go back to the list view
+      // } catch (err) {
+      //   console.error("Failed to save workflow steps via GQL:", err);
+      //   alert(`Error saving steps: ${err.message}`); // Replace with a proper notification
+      //   throw err; // Re-throw so the editor can also handle it if needed
+      // } finally {
+      //   setIsSavingSteps(false);
+      // }
+      // --- END GQL MUTATION CALL ---
+
+      // Mock saving behavior:
+      return new Promise<void>((resolve, reject) => {
+        // Make it async to match editor's expectation
+        setTimeout(() => {
+          alert(
+            `Mock Save!\nWorkflow ID: ${workflowId}\nSteps: ${JSON.stringify(
+              updatedSteps,
+              null,
+              2
+            )}`
+          );
+          console.log(
+            "Mock saved steps for workflow:",
+            workflowId,
+            updatedSteps
+          );
+          handleExitMaintainWorkflow(); // Navigate back after "save"
+          resolve();
+        }, 500);
+      });
     },
-    [
-      /* handleExitMaintainWorkflow */
-    ]
+    [handleExitMaintainWorkflow /*, updateWorkflowStepsMutation */]
   );
 
   return {
@@ -311,10 +338,8 @@ const useDashboardLogic = () => {
     handleCardClick,
     handleBack,
     handleLogout,
-    selectedIdForEdit, // For general form editing
-    setSelectedIdForEdit, // To set which item to edit (e.g. affiliate)
-
-    // Workflow specific state and handlers
+    selectedIdForEdit,
+    setSelectedIdForEdit,
     editingWorkflow,
     handleNavigateToMaintainWorkflow,
     handleExitMaintainWorkflow,
@@ -330,8 +355,12 @@ const useDashboardLogic = () => {
 // ========================================================================
 // Dashboard Component
 // ========================================================================
-const Dashboard: React.FC = () => {
-  // --- Initial Auth Check Query ---
+const Dashboard: React.FC<{
+  userId: string | null; // Added props based on App.tsx usage
+  userName: string | null;
+  onLogout: () => void; // Added props based on App.tsx usage
+}> = ({ userId, userName: initialUserName, onLogout }) => {
+  // Added props
   const { loading: authLoading, error: authError } = useQuery(
     GET_CURRENT_USER_STATUS,
     {
@@ -341,16 +370,15 @@ const Dashboard: React.FC = () => {
     }
   );
 
-  // --- Use the Custom Hook for Dashboard Logic ---
   const {
     currentLevelKey,
-    userName,
+    userName, // This comes from localStorage in the hook
     iconMap,
     handleCardClick,
     handleBack,
-    handleLogout,
+    // handleLogout, // Use onLogout prop from App.tsx
     selectedIdForEdit,
-    setSelectedIdForEdit, // For AffiliateEditForm example
+    setSelectedIdForEdit,
     editingWorkflow,
     handleNavigateToMaintainWorkflow,
     handleExitMaintainWorkflow,
@@ -362,12 +390,11 @@ const Dashboard: React.FC = () => {
     handleSaveWorkflowSteps,
   } = useDashboardLogic();
 
-  // --- State for UI elements (can also be part of useDashboardLogic if preferred) ---
   const [isPowerButtonHovered, setIsPowerButtonHovered] = useState(false);
   const [isPowerButtonActive, setIsPowerButtonActive] = useState(false);
 
-  // --- Data Fetching Hooks (Conditional based on currentLevelKey) ---
-  // These remain in the main component as they are tied to its rendering lifecycle based on currentLevelKey
+  // Data fetching for list views (Affiliates, Clients, Entities)
+  // WorkFlowsView now fetches its own data.
   const {
     data: affiliatesData,
     loading: affiliatesLoading,
@@ -389,16 +416,8 @@ const Dashboard: React.FC = () => {
   } = useQuery(GET_MANAGE_ENTITIES, {
     skip: currentLevelKey !== "manageEntitiesView",
   });
-  const {
-    data: workFlowsData,
-    loading: workFlowsLoading,
-    error: workFlowsError,
-  } = useQuery(GET_MANAGE_WORKFLOWS, {
-    skip: currentLevelKey !== "LoadWorkFlowsView" && !editingWorkflow,
-  });
-  // Note: GET_WORKFLOW for a single workflow details might be better fetched *inside* EditWorkFlowModal or MaintainWorkFlowView
+  // Removed workFlowsData query from here as WorkFlowsView handles its own data.
 
-  // --- Render Helper for Main Content ---
   const renderMainContent = () => {
     if (authLoading) return <div style={styles.loader}>Authenticating...</div>;
     if (authError)
@@ -406,11 +425,10 @@ const Dashboard: React.FC = () => {
         <div style={styles.errorMessage}>
           Authentication Failed. Please try logging in again.
         </div>
-      ); // ErrorLink should redirect
+      );
 
-    // General Edit Form (Example for Affiliates)
     if (selectedIdForEdit && currentLevelKey === "addAffiliateView") {
-      // Assuming 'addAffiliateView' is a key
+      // Example for general edit form
       return (
         <AffiliateEditForm
           affiliateId={selectedIdForEdit}
@@ -428,7 +446,9 @@ const Dashboard: React.FC = () => {
             isError={affiliatesError?.message}
             onEdit={(id) => {
               console.log("Edit Affiliate", id);
-              setSelectedIdForEdit(id);
+              setSelectedIdForEdit(
+                id
+              ); /* Consider setCurrentLevelKey('editAffiliateView') */
             }}
             onClients={(id) => console.log("List of clients action:", id)}
           />
@@ -453,32 +473,30 @@ const Dashboard: React.FC = () => {
             onBilling={(id: string) => console.log("Billing for entity:", id)}
           />
         );
+
       case "LoadWorkFlowsView":
         if (editingWorkflow) {
+          // Render the step editor if a workflow is selected for editing steps
           return (
-            <MaintainWorkFlowView
+            <WorkFlowStepEditor
               workflowId={editingWorkflow.id}
               workflowName={editingWorkflow.name}
               clientId={editingWorkflow.clientId}
-              // Pass its own loading/error states if MaintainWorkFlowView fetches its own steps
-              isLoading={false} // Replace with actual loading state for steps
-              isError={null} // Replace with actual error state for steps
               onSave={handleSaveWorkflowSteps}
               onBack={handleExitMaintainWorkflow}
             />
           );
         }
+        // Otherwise, render the list of workflows
         return (
           <WorkFlowsView
-            workFlows={workFlowsData?.nexusWorkFlows || []}
-            isLoading={workFlowsLoading}
-            isError={workFlowsError?.message}
-            onEdit={handleOpenEditWorkflowModal} // Opens modal for name/status
-            onManageWorkflowSteps={handleNavigateToMaintainWorkflow} // Switches to D&D editor
+            // WorkFlowsView now fetches its own data and doesn't need workFlows, isLoading, isError props from here.
+            // It only needs handlers for actions.
+            onEditWorkflowMeta={handleOpenEditWorkflowModal} // For editing name/status via modal
+            onManageWorkflowSteps={handleNavigateToMaintainWorkflow} // For navigating to step editor
           />
         );
-      // Other cases for 'Chat', 'Settings' sub-menus can be added here
-      // Default to card navigation for 'root' or other menu levels
+
       default:
         const navItems = iconMap[currentLevelKey] || [];
         if (navItems.length === 0 && currentLevelKey !== "root") {
@@ -496,7 +514,23 @@ const Dashboard: React.FC = () => {
             tabIndex={0}
             aria-label={item.ariaLabel}
             onClick={() => handleCardClick(item)}
-            // ... (rest of card interaction styles/handlers)
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") handleCardClick(item);
+            }}
+            // Simplified hover/active handling, consider CSS classes
+            onMouseDown={(e) =>
+              (e.currentTarget.style.transform = "scale(0.98)")
+            }
+            onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+            onMouseEnter={(e) =>
+              Object.assign(e.currentTarget.style, styles.dashboardCardHover)
+            }
+            onMouseLeave={(e) =>
+              Object.assign(
+                e.currentTarget.style,
+                styles.dashboardCard as React.CSSProperties
+              )
+            }
           >
             <item.IconComponent
               style={styles.cardIcon as React.CSSProperties}
@@ -506,18 +540,22 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const isRootLevel = currentLevelKey === "root";
-  const headerTitle = isRootLevel
-    ? "Dashboard"
-    : currentLevelKey
-        .replace(/View$/, "")
-        .replace(/([A-Z])/g, " $1")
-        .trim();
+  const isRootLevel = currentLevelKey === "root" && !editingWorkflow; // Also check editingWorkflow for title
+  let headerTitleText = "Dashboard";
+  if (editingWorkflow && currentLevelKey === "LoadWorkFlowsView") {
+    headerTitleText = `Editing Steps: ${editingWorkflow.name}`;
+  } else if (!isRootLevel) {
+    headerTitleText = currentLevelKey
+      .replace(/View$/, "")
+      .replace(/([A-Z])/g, " $1")
+      .trim();
+    if (currentLevelKey === "LoadWorkFlowsView")
+      headerTitleText = "Manage Workflows";
+  }
 
   return (
     <div style={styles.body}>
       <div style={styles.dashboardContainer}>
-        {/* Header */}
         <div style={styles.dashboardHeader}>
           <button
             style={{
@@ -535,11 +573,12 @@ const Dashboard: React.FC = () => {
               styles.headerTitle || { fontSize: "1.5rem", margin: "0 1rem" }
             }
           >
-            {headerTitle}
+            {headerTitleText}
           </h1>
           <span style={styles.welcomeMessage} aria-live="polite">
-            Welcome, {userName}!
-          </span>
+            Welcome, {userName || initialUserName}!
+          </span>{" "}
+          {/* Use initialUserName from props as fallback */}
           <div
             title="Logout"
             aria-label="Logout"
@@ -550,9 +589,9 @@ const Dashboard: React.FC = () => {
               ...(isPowerButtonHovered ? styles.powerButtonHover : {}),
               ...(isPowerButtonActive ? styles.powerButtonActive : {}),
             }}
-            onClick={handleLogout}
+            onClick={onLogout} // Use onLogout from props
             onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") handleLogout();
+              if (e.key === "Enter" || e.key === " ") onLogout();
             }}
             onMouseEnter={() => setIsPowerButtonHovered(true)}
             onMouseLeave={() => {
@@ -566,20 +605,19 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Main Content Area - Now wrapped in ApolloProvider if needed by children consistently */}
-        {/* If only some children need it, wrap them individually or ensure client is passed via context */}
-        {/* For simplicity, assuming children might make their own queries or use mutations */}
         <ApolloProvider client={client}>
+          {" "}
+          {/* Ensure client is available to children */}
           <div style={styles.dashboardMain}>{renderMainContent()}</div>
         </ApolloProvider>
 
-        {/* Edit Workflow Modal */}
         {isEditWorkFlowModalOpen && selectedWorkFlowForModal && (
           <EditWorkFlowModal
-            workflow={selectedWorkFlowForModal}
+            workflow={selectedWorkFlowForModal} // This prop name needs to match EditWorkFlowModal
             isOpen={isEditWorkFlowModalOpen}
             onClose={handleCloseEditWorkflowModal}
-            onSave={handleSaveWorkflowFromModal}
+            onSave={handleSaveWorkflowFromModal} // This expects WorkFlowForm, not WorkFlow
+            // initialData might be needed here if EditWorkFlowModal uses it
           />
         )}
       </div>

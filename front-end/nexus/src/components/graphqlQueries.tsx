@@ -213,3 +213,32 @@ export const GET_CURRENT_USER_STATUS = gql`
     }
   }
 `;
+
+export const GET_AVAILABLE_CLIENT_ENTITIES = gql`
+  query GetAvailableClientEntities($clientId: ID) {
+    # Assuming your backend has a resolver that can provide entities suitable for workflows.
+    # This might be all entities for a client, or entities not yet used, etc.
+    # The structure below mirrors GET_MANAGE_ENTITIES for consistency.
+    # Adjust field names and types based on your actual schema.
+    nexusEntities(
+      clientId: $clientId # Example: filter by client # status: "active" # Example: only active entities
+    ) # suitableForWorkflow: true # Example: a custom filter if your backend supports it
+    {
+      iD
+      entityName
+      entityType
+      # Include any other fields needed for an entity in the D&D list or as a step
+      # For example, if an entity has a specific icon or color:
+      # icon
+      # color
+      # And for consistency with the Entity type in interface.tsx:
+      clientId
+      entityPhone
+      ratePerMinute
+      entityStatus
+      createdAt
+      updatedAt
+      # client { clientName } # May not be needed if already filtered by clientId
+    }
+  }
+`;

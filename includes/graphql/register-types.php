@@ -31,7 +31,7 @@ class NexusGraphQLTypeRegistrar
         $table_name_entities    = $wpdb->prefix . 'nexus_entities'; // If needed for other types
         $table_name_twilio_data = $wpdb->prefix . 'nexus_twilio_data';
         $table_name_workflows = $wpdb->prefix . 'nexus_workflows';
-        $table_name_workflow_entities = $wpdb->prefix . 'nexus_workflow_entities';
+        $table_name_workflow_entities = $wpdb->prefix . 'nexus_workflows_entities';
 
         // --- Register NexusClient Type ---
         register_graphql_object_type('NexusClient', [
@@ -371,12 +371,12 @@ class NexusGraphQLTypeRegistrar
                     'resolve'     => fn($row) => !empty($row->ID) ? (int) $row->ID : null,
                 ],
                 'workflowId' => [
-                    'type'        => 'Int',
+                    'type'        => 'ID',
                     'description' => __('ID of the parent workflow', 'nexus-twilio-affiliates'),
                     'resolve'     => fn($row) => !empty($row->workflow_id) ? (int) $row->workflow_id : null,
                 ],
                 'entityId' => [
-                    'type'        => 'Int',
+                    'type'        => 'ID',
                     'description' => __('ID of the Nexus Entity in this step', 'nexus-twilio-affiliates'),
                     'resolve'     => fn($row) => !empty($row->entity_id) ? (int) $row->entity_id : null,
                 ],
@@ -767,12 +767,38 @@ class NexusGraphQLTypeRegistrar
             'type'        => 'nexusWorkFlowStep',
             'description' => __('Retrieve a single Nexus Workflow Step by its own ID', 'nexus-twilio-affiliates'),
             'args'        => [
-                'iD' => ['type' => ['non_null' => 'ID']], // ID from nexus_workflow_entities table
+                'iD' => ['type' => 'ID'], // ID from nexus_workflow_entities table
+                'workflowId' => ['type' => 'ID'], // ID from nexus_workflow_entities table
             ],
             'resolve'     => function ($root, $args) use ($table_name_workflow_entities, $wpdb) {
-                $step_id = absint($args['iD']);
-                if (empty($step_id)) return null;
-                return $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name_workflow_entities ID = %d", $step_id));
+
+                $sql = "SELECT * FROM $table_name_workflow_entities";
+                $where_clauses = [];
+                $params = [];
+
+                if (!empty($args['iD'])) {
+                    $where_clauses[] = "ID = %d";
+                    $params[] = sanitize_text_field($args['iD']);
+                }
+                if (!empty($args['workflowId'])) {
+                    $where_clauses[] = "workflowId = %d";
+                    $params[] = sanitize_text_field($args['workflowId']);
+                }
+                if (count($where_clauses) > 0) {
+                    $sql .= " WHERE " . implode(" AND ", $where_clauses);
+                }
+                $sql .= " ORDER BY workflow_order";
+
+                $prepared_sql = $wpdb->prepare($sql, ...$params);
+                $results = $wpdb->get_results($prepared_sql) ?: [];
+                error_log($wpdb->last_query);
+                if ($wpdb->last_error) {
+                    error_log("GraphQL nexusWorkflows Error: " . $wpdb->last_error . " | SQL: " . $prepared_sql);
+                    // Optionally throw new \GraphQL\Error\UserError('Failed to fetch workflows.');
+                    return []; // Return empty on DB error
+                }
+                error_log(print_r($wpdb->last_result, true));
+                return $results ?: [];
             },
         ]);
     }
