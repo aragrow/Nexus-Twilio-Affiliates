@@ -529,6 +529,8 @@ class NexusGraphQLTypeRegistrar
             },
         ]);
 
+
+
         register_graphql_field('RootQuery', 'nexusClient', [
             'type' => 'NexusClient',
             'args' => ['iD' => ['type' => ['non_null' => 'ID']]],
@@ -723,20 +725,20 @@ class NexusGraphQLTypeRegistrar
             'resolve'     => function ($root, $args) use ($table_name_workflows, $table_name_clients, $wpdb) {
 
                 error_log('RootQuery -> nexusWorkFlows - Executed.');
-                $sql = "SELECT *, b.client_name FROM $table_name_workflows JOIN $table_name_clients b ON b.ID = client_id";
+                $sql = "SELECT a.*, b.client_name FROM $table_name_workflows a JOIN $table_name_clients b ON b.ID = a.client_id";
                 $where_clauses = [];
                 $params = [];
 
                 if (!empty($args['clientId'])) {
-                    $where_clauses[] = "client_id = %d";
+                    $where_clauses[] = "a.client_id = %d";
                     $params[] = absint($args['clientId']);
                 }
                 if (!empty($args['workFlowName'])) {
-                    $where_clauses[] = "workflow_name = %s";
+                    $where_clauses[] = "a.workflow_name = %s";
                     $params[] = sanitize_text_field($args['workFlowName']);
                 }
                 if (!empty($args['workFlowStatus'])) {
-                    $where_clauses[] = "workflow_status = %s";
+                    $where_clauses[] = "a.workflow_status = %s";
                     $params[] = sanitize_text_field($args['workFlowStatus']);
                 }
 
@@ -749,7 +751,8 @@ class NexusGraphQLTypeRegistrar
 
                 $prepared_sql = $wpdb->prepare($sql, ...$params);
                 $results = $wpdb->get_results($prepared_sql) ?: [];
-                error_log($wpdb->last_query);
+                // error_log($wpdb->last_query);
+                // error_log(print_r($wpdb->last_result, true));
                 if ($wpdb->last_error) {
                     error_log("GraphQL nexusWorkflows Error: " . $wpdb->last_error . " | SQL: " . $prepared_sql);
                     // Optionally throw new \GraphQL\Error\UserError('Failed to fetch workflows.');
@@ -759,6 +762,53 @@ class NexusGraphQLTypeRegistrar
                 return $results ?: [];
             },
         ]);
+
+        /**
+         * This query will:
+         *  Accept a required workflowId parameter
+         *  Join the workflow entities table with the entities, workflows, and clients tables
+         *  Return workflow steps with additional entity and client information
+         *  Order the results by the workflow_order field
+         */
+        // --- Register Root Query for Workflow Entities by Workflow ID ---
+        register_graphql_field('RootQuery', 'nexusWorkflowEntitiesByWorkflowId', [
+            'type'    => ['list_of' => 'nexusWorkFlowStep'],
+            'description' => __('Retrieve workflow entities for a specific workflow ID', 'nexus-twilio-affiliates'),
+            'args'    => [
+                'workflowId' => [
+                    'type' => ['non_null' => 'ID'],
+                    'description' => __('The ID of the workflow to retrieve entities for', 'nexus-twilio-affiliates'),
+                ],
+            ],
+            'resolve' => function ($root, $args, $context, $info) use ($table_name_workflow_entities, $table_name_entities, $table_name_clients, $table_name_workflows, $wpdb) {
+                error_log('RootQuery -> nexusWorkflowEntitiesByWorkflowId - Executed.');
+                $workflow_id = $args['workflowId'];
+                if (empty($workflow_id)) {
+                    return [];
+                }
+
+                $sql = "SELECT we.*, e.entity_name, e.entity_phone, e.entity_type, c.client_name 
+                FROM $table_name_workflow_entities we
+                JOIN $table_name_entities e ON e.ID = we.entity_id
+                JOIN $table_name_workflows w ON w.ID = we.workflow_id
+                JOIN $table_name_clients c ON c.ID = w.client_id
+                WHERE we.workflow_id = %d
+                ORDER BY we.workflow_order ASC";
+
+                $prepared_sql = $wpdb->prepare($sql, $workflow_id);
+                $results = $wpdb->get_results($prepared_sql) ?: [];
+
+                // error_log($wpdb->last_query);
+                // error_log(print_r($wpdb->last_result, true));
+                if ($wpdb->last_error) {
+                    error_log("GraphQL nexusWorkflowEntitiesByWorkflowId Error: " . $wpdb->last_error . " | SQL: " . $prepared_sql);
+                    return [];
+                }
+
+                return $results;
+            },
+        ]);
+
 
         // --- Root Queries for Workflow Steps (Optional, usually accessed via Workflow.steps) ---
         // You might not need direct root queries for nexusWorkFlowStep if they are always fetched

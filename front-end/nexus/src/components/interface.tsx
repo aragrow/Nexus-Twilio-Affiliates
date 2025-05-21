@@ -168,12 +168,41 @@ interface WorkFlowStepInput {
 interface WorkFlowStepEditorProps {
   workflowId: string;
   workflowName: string;
-  clientId: string; // Context for which client this workflow belongs to
+  clientId: string;
   onSave: (
     workflowId: string,
+    workflowName: string,
+    clientId: string,
     updatedSteps: WorkFlowStepInput[]
   ) => Promise<void>; // Async save handler
   onBack: () => void; // Handler to go back to the previous view
+}
+
+// Define types for our data
+interface WorkflowEntity {
+  iD: string;
+  workflowId: string;
+  entityId: string;
+  clientId: string;
+  workflowOrder: number;
+  stepStatus: string;
+  workflow: {
+    iD: string;
+    workFlowName: string;
+    workFlowStatus: string;
+    client: {
+      iD: string;
+      clientName: string;
+      clientPhone: string;
+      status: string;
+    };
+  };
+  entity: {
+    iD: string;
+    entityName: string;
+    entityType: string;
+    entityPhone: string;
+  };
 }
 
 export type {
@@ -195,6 +224,7 @@ export type {
   WorkFlowStep,
   WorkFlowStepInput,
   WorkFlowStepEditorProps,
+  WorkflowEntity,
   maintainWorkFlowTableProps,
   EditWorkFlowModalProps,
   BackButtonProps,

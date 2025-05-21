@@ -221,9 +221,8 @@ export const GET_AVAILABLE_CLIENT_ENTITIES = gql`
     # The structure below mirrors GET_MANAGE_ENTITIES for consistency.
     # Adjust field names and types based on your actual schema.
     nexusEntities(
-      clientId: $clientId # Example: filter by client # status: "active" # Example: only active entities
-    ) # suitableForWorkflow: true # Example: a custom filter if your backend supports it
-    {
+      clientId: $clientId # Example: filter by client # status: "active" # Example: only active entities # suitableForWorkflow: true # Example: a custom filter if your backend supports it
+    ) {
       iD
       entityName
       entityType
@@ -239,6 +238,30 @@ export const GET_AVAILABLE_CLIENT_ENTITIES = gql`
       createdAt
       updatedAt
       # client { clientName } # May not be needed if already filtered by clientId
+    }
+  }
+`;
+
+export const GET_STEP_WORKFLOW_ENTITIES = gql`
+  query GetWorkflowEntitiesByWorkflowId($workflowId: ID!) {
+    nexusWorkflowEntitiesByWorkflowId(workflowId: $workflowId) {
+      iD
+      workflowId
+      entityId
+      workflowOrder
+      stepStatus
+      entity {
+        entityName
+        entityPhone
+        entityType
+        entityStatus
+      }
+      workflow {
+        workFlowName
+        client {
+          clientName
+        }
+      }
     }
   }
 `;

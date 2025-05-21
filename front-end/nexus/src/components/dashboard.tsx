@@ -227,6 +227,7 @@ const useDashboardLogic = () => {
   const handleNavigateToMaintainWorkflow = useCallback(
     (workflowId: string, workflowName: string, clientId: string) => {
       setEditingWorkflow({ id: workflowId, name: workflowName, clientId });
+      console.log("workflowId: ", workflowId);
       // currentLevelKey remains 'LoadWorkFlowsView', the content within it changes
     },
     []

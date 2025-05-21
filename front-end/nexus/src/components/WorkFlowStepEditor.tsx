@@ -1,20 +1,23 @@
 // src/components/WorkFlowStepEditor.tsx
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react"; // Added useEffect import
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type {
-  // <--- Add 'type' keyword here
   DropResult,
   DroppableProvided,
   DraggableProvided,
   DraggableStateSnapshot,
 } from "@hello-pangea/dnd";
-import { useQuery } from "@apollo/client"; // <--- IMPORT useQuery
-import { GET_AVAILABLE_CLIENT_ENTITIES } from "./graphqlQueries"; // <--- IMPORT THE NEW QUERY
+import { useQuery } from "@apollo/client";
+import {
+  GET_AVAILABLE_CLIENT_ENTITIES,
+  GET_STEP_WORKFLOW_ENTITIES,
+} from "./graphqlQueries";
 import type {
   Entity,
   WorkFlowStep,
   WorkFlowStepInput,
   WorkFlowStepEditorProps,
+  WorkflowEntity,
 } from "./interface";
 import editorStyles from "./workFlowStepEditorStyles";
 
@@ -25,12 +28,10 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
   onSave,
   onBack,
 }) => {
+  console.log("workflowId: ", workflowId);
+  console.log("workFlowName: ", workflowName);
+  console.log("clientId: ", clientId);
   const [assignedSteps, setAssignedSteps] = useState<WorkFlowStep[]>([]);
-  // availableEntities state will now be primarily driven by Apollo query data
-  // const [availableEntities, setAvailableEntities] = useState<Entity[]>([]); // No longer directly set like this for available
-
-  const [isLoadingMockSteps, setIsLoadingMockSteps] = useState(true); // Separate loading for mock part
-  const [errorMockSteps, setErrorMockSteps] = useState<string | null>(null); // Separate error for mock part
 
   // --- Fetch Available Entities using Apollo Client ---
   const {
@@ -38,9 +39,9 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
     error: errorAvailableEntities,
     data: dataAvailableEntities,
   } = useQuery<{ nexusEntities: Entity[] }>(GET_AVAILABLE_CLIENT_ENTITIES, {
-    variables: { clientId: clientId }, // Pass the clientId to the query
-    fetchPolicy: "cache-and-network", // Or your preferred fetch policy
-    // skip: !clientId, // Optionally skip if clientId is not yet available, though it's a prop here
+    variables: { clientId: clientId },
+    fetchPolicy: "cache-and-network",
+    skip: !clientId,
   });
 
   // Derived available entities from query data
@@ -48,40 +49,56 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
     return dataAvailableEntities?.nexusEntities || [];
   }, [dataAvailableEntities]);
 
-  // --- MOCK DATA FETCHING for Assigned Steps (until real GQL is implemented) ---
-  useEffect(() => {
-    setIsLoadingMockSteps(true);
-    setErrorMockSteps(null);
-    const mockFetchSteps = async () => {
-      console.log(`Mock fetching steps for workflowId: ${workflowId}`);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      // Example of pre-populating assigned steps:
-      // setAssignedSteps([
-      //   { id: "entity-1", name: "Phone Line Alpha", type: "Phone", iD: "entity-1", order: 0, clientId: null, entityType: "Phone", entityName: "Phone Line Alpha", entityPhone: null, ratePerMinute: null, entityStatus: null, createdAt: null, updatedAt: null },
-      // ]);
-      setAssignedSteps([]); // Start empty for now
-    };
+  // --- Fetch Step Entities using Apollo Client ---
+  const {
+    loading: isLoadingStepEntities,
+    error: errorStepEntities,
+    data: dataStepEntities,
+  } = useQuery<{ nexusWorkflowEntitiesByWorkflowId: WorkflowEntity[] }>(
+    GET_STEP_WORKFLOW_ENTITIES,
+    {
+      variables: { workflowId: workflowId },
+      fetchPolicy: "cache-and-network",
+      skip: !workflowId,
+    }
+  );
 
-    mockFetchSteps()
-      .catch((err) => {
-        console.error("Error fetching mock steps for editor", err);
-        setErrorMockSteps("Failed to load initial workflow steps.");
-      })
-      .finally(() => setIsLoadingMockSteps(false));
-  }, [workflowId]);
-  // --- END MOCK DATA FETCHING for Assigned Steps ---
+  // Derived step entities from query data
+  const fetchedStepEntities = useMemo(() => {
+    return dataStepEntities?.nexusWorkflowEntitiesByWorkflowId || [];
+  }, [dataStepEntities]);
 
   // Combined loading and error states
-  const isLoading = isLoadingMockSteps || isLoadingAvailableEntities;
-  const overallError = errorMockSteps || errorAvailableEntities?.message;
+  const isLoading = isLoadingStepEntities || isLoadingAvailableEntities;
+  const overallError =
+    errorStepEntities?.message || errorAvailableEntities?.message;
+
+  // Populate assignedSteps with entities from fetchedStepEntities
+  useEffect(() => {
+    if (fetchedStepEntities && fetchedStepEntities.length > 0) {
+      // Map the workflow step entities to the format expected by assignedSteps
+      const mappedSteps = fetchedStepEntities.map((step) => ({
+        id: step.entityId,
+        iD: step.entityId,
+        entityId: step.entityId,
+        entityName: step.entity?.entityName,
+        entityType: step.entity?.entityType,
+        entityPhone: step.entity?.entityPhone,
+        order: step.workflowOrder,
+        // Add any other properties needed for WorkFlowStep
+      }));
+
+      setAssignedSteps(mappedSteps);
+    }
+  }, [fetchedStepEntities]);
 
   // This filters entities fetched by Apollo that are already in `assignedSteps`
   const trulyAvailableEntities = useMemo(() => {
     const assignedEntityIds = new Set(
-      assignedSteps.map((step) => step.id || step.iD)
-    ); // Use id or iD
+      assignedSteps.map((step) => step.entityId || step.id || step.iD)
+    );
     return fetchedAvailableEntities.filter(
-      (entity) => !assignedEntityIds.has(entity.id || entity.iD)
+      (entity) => !assignedEntityIds.has(entity.iD || entity.id)
     );
   }, [fetchedAvailableEntities, assignedSteps]);
 
@@ -90,15 +107,16 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
       const { source, destination, draggableId } = result;
       if (!destination) return;
 
-      // Find the dragged entity from the combined list of what was fetched and what might be in assigned steps
-      // The source of truth for available is `fetchedAvailableEntities`
-      // The source of truth for assigned is `assignedSteps`
+      // Find the dragged entity
       const entityDraggedFromAvailable = fetchedAvailableEntities.find(
-        (e) => (e.id || e.iD) === draggableId
+        (e) => (e.iD || e.id) === draggableId
       );
+
+      // Fixed: Look for entity in assignedSteps, not fetchedStepEntities
       const entityDraggedFromAssigned = assignedSteps.find(
-        (e) => (e.id || e.iD) === draggableId
+        (e) => (e.iD || e.id) === draggableId
       );
+
       const entityDragged =
         entityDraggedFromAvailable || entityDraggedFromAssigned;
 
@@ -106,11 +124,6 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
         console.warn("Dragged entity not found:", draggableId);
         return;
       }
-
-      // Ensure entityDragged has a consistent 'id' field for dnd, mapping from 'iD' if necessary
-      // For this example, we assume Entity type from interface.tsx uses 'id' or we map it.
-      // If your Entity type uses 'iD', ensure draggableId matches that.
-      // For simplicity, let's assume `draggableId` is based on `entity.id` (or `entity.iD`)
 
       if (
         source.droppableId === destination.droppableId &&
@@ -125,10 +138,10 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
       ) {
         // Moving from Available to Assigned
         if (entityDraggedFromAvailable) {
-          // Make sure we use a clean object for the new step, potentially mapping iD to id
+          // Make sure we use a clean object for the new step
           const newStepEntity: Entity = {
             ...entityDraggedFromAvailable,
-            id: entityDraggedFromAvailable.id || entityDraggedFromAvailable.iD, // Ensure 'id' for dnd
+            id: entityDraggedFromAvailable.iD || entityDraggedFromAvailable.id,
           };
           const newStep: WorkFlowStep = {
             ...newStepEntity,
@@ -157,9 +170,8 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
         destination.droppableId === "availableEntitiesDroppable"
       ) {
         // Moving from Assigned back to Available (removing the step)
-        // The entity automatically reappears in `trulyAvailableEntities` due to `useMemo`
         const newAssignedSteps = assignedSteps.filter(
-          (step) => (step.id || step.iD) !== draggableId
+          (step) => (step.iD || step.id) !== draggableId
         );
         setAssignedSteps(
           newAssignedSteps.map((step, idx) => ({ ...step, order: idx }))
@@ -167,38 +179,36 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
       }
     },
     [assignedSteps, fetchedAvailableEntities]
-  ); // Removed trulyAvailableEntities, rely on fetched + assigned
+  );
 
-  const [isSaving, setIsSaving] = useState(false); // Local saving state for the save button
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveChanges = async () => {
     const stepsToSave: WorkFlowStepInput[] = assignedSteps.map(
       (step, index) => ({
-        entityId: step.id || step.iD, // Use id or iD
+        entityId: step.entityId || step.id || step.iD,
         order: index,
       })
     );
     try {
       setIsSaving(true);
       await onSave(workflowId, stepsToSave);
-      // onBack(); // Parent (dashboard) might call onBack
     } catch (err) {
-      // Error will be displayed via overallError if set by onSave promise rejection
       console.error(
         "Save failed in WorkFlowStepEditor's handleSaveChanges",
         err
       );
-      // Potentially set a local error specific to saving if `onSave` doesn't update a shared one
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Initial loading screen:
+  // Initial loading screen
   if (
     isLoading &&
     assignedSteps.length === 0 &&
-    fetchedAvailableEntities.length === 0
+    fetchedAvailableEntities.length === 0 &&
+    fetchedStepEntities.length === 0
   ) {
     return <div style={editorStyles.loader}>Loading Workflow Editor...</div>;
   }
@@ -213,10 +223,6 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
       <div style={editorStyles.header}>
         <h2 style={editorStyles.title}>Manage Steps for: {workflowName}</h2>
       </div>
-
-      {/* Display specific loading/error for available entities if needed, or rely on overallError */}
-      {/* {isLoadingAvailableEntities && <p style={editorStyles.loader}>Loading available entities...</p>}
-      {errorAvailableEntities && <p style={editorStyles.errorMessage}>Error fetching entities: {errorAvailableEntities.message}</p>} */}
 
       <DragDropContext onDragEnd={onDragEnd}>
         <div style={editorStyles.dndContainer}>
@@ -253,8 +259,8 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
 
                 {trulyAvailableEntities.map((entity, index) => (
                   <Draggable
-                    key={entity.id || entity.iD}
-                    draggableId={entity.id || entity.iD}
+                    key={entity.iD || entity.id}
+                    draggableId={entity.iD || entity.id}
                     index={index}
                   >
                     {(
@@ -310,16 +316,16 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
                 <h3 style={editorStyles.columnTitle}>
                   Workflow Steps (Drag to reorder)
                 </h3>
-                {isLoadingMockSteps && assignedSteps.length === 0 && (
+                {isLoadingStepEntities && assignedSteps.length === 0 && (
                   <p style={editorStyles.placeholder}>Loading steps...</p>
                 )}
-                {!isLoadingMockSteps && errorMockSteps && (
+                {!isLoadingStepEntities && errorStepEntities && (
                   <p style={editorStyles.errorMessage}>
                     Could not load assigned steps.
                   </p>
                 )}
-                {!isLoadingMockSteps &&
-                  !errorMockSteps &&
+                {!isLoadingStepEntities &&
+                  !errorStepEntities &&
                   assignedSteps.length === 0 && (
                     <p style={editorStyles.placeholder}>
                       Drag entities here to add steps.
@@ -328,8 +334,8 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
 
                 {assignedSteps.map((step, index) => (
                   <Draggable
-                    key={step.id || step.iD}
-                    draggableId={step.id || step.iD}
+                    key={step.iD || step.id}
+                    draggableId={step.iD || step.id}
                     index={index}
                   >
                     {(
