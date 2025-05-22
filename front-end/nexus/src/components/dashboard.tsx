@@ -8,10 +8,10 @@ import AffiliatesView from "./affiliatesView";
 import ClientsView from "./clientsView";
 import EntitiesView from "./entitiesView";
 import WorkFlowsView from "./workFlowsView";
+import EditWorkflowDetails from "./EditWorkflowDetails";
 // import MaintainWorkFlowView from "./maintainWorkFlowView"; // No longer used for steps
 import WorkFlowStepEditor from "./WorkFlowStepEditor"; // <--- IMPORT NEW COMPONENT
 import AffiliateEditForm from "./affiliateEditForm";
-import { EditWorkFlowModal } from "./editWorkFlowModal";
 
 // --- GraphQL & API Imports ---
 import client from "./apolloClient";
@@ -68,11 +68,8 @@ const useDashboardLogic = () => {
   const [editingWorkflow, setEditingWorkflow] = useState<{
     id: string;
     name: string;
-    clientId: string;
+    status: string;
   } | null>(null);
-  const [isEditWorkFlowModalOpen, setIsEditWorkFlowModalOpen] = useState(false);
-  const [selectedWorkFlowForModal, setSelectedWorkFlowForModal] =
-    useState<WorkFlow | null>(null);
 
   useEffect(() => {
     const storedUserName = localStorage.getItem("userName") || "User";
@@ -239,45 +236,6 @@ const useDashboardLogic = () => {
     // currentLevelKey should remain 'LoadWorkFlowsView' to show the list again
   }, []);
 
-  const handleOpenEditWorkflowModal = useCallback(
-    async (workflowId: string) => {
-      try {
-        const { data } = await client.query({
-          query: GET_WORKFLOW,
-          variables: { id: workflowId },
-          fetchPolicy: "network-only",
-        });
-        if (data?.nexusWorkFlow) {
-          setSelectedWorkFlowForModal(data.nexusWorkFlow);
-          setIsEditWorkFlowModalOpen(true);
-        } else {
-          console.error("Workflow not found for modal edit:", workflowId);
-        }
-      } catch (error) {
-        console.error("Error fetching workflow for modal edit:", error);
-      }
-    },
-    []
-  );
-
-  const handleCloseEditWorkflowModal = useCallback(() => {
-    setIsEditWorkFlowModalOpen(false);
-    setSelectedWorkFlowForModal(null);
-  }, []);
-
-  const handleSaveWorkflowFromModal = useCallback(
-    async (updatedWorkFlow: WorkFlow) => {
-      // This is for metadata (name, status)
-      console.log("Saving workflow metadata from modal:", updatedWorkFlow);
-      // TODO: Implement GQL mutation for workflow metadata
-      // e.g., await updateWorkflowMetadataMutation({ variables: { ... } });
-      setIsEditWorkFlowModalOpen(false);
-      setSelectedWorkFlowForModal(null);
-      // Consider refetching GET_MANAGE_WORKFLOWS if WorkFlowsView doesn't do it automatically
-    },
-    []
-  );
-
   // Add this hook in the Dashboard component
   const [updateWorkflowStepsMutation, { loading: isSavingSteps }] = useMutation(
     UPDATE_WORKFLOW_STEPS
@@ -342,11 +300,6 @@ const useDashboardLogic = () => {
     editingWorkflow,
     handleNavigateToMaintainWorkflow,
     handleExitMaintainWorkflow,
-    handleOpenEditWorkflowModal,
-    handleCloseEditWorkflowModal,
-    handleSaveWorkflowFromModal,
-    selectedWorkFlowForModal,
-    isEditWorkFlowModalOpen,
     handleSaveWorkflowSteps,
   };
 };
@@ -381,11 +334,6 @@ const Dashboard: React.FC<{
     editingWorkflow,
     handleNavigateToMaintainWorkflow,
     handleExitMaintainWorkflow,
-    handleOpenEditWorkflowModal,
-    handleCloseEditWorkflowModal,
-    handleSaveWorkflowFromModal,
-    selectedWorkFlowForModal,
-    isEditWorkFlowModalOpen,
     handleSaveWorkflowSteps,
   } = useDashboardLogic();
 
@@ -416,6 +364,19 @@ const Dashboard: React.FC<{
     skip: currentLevelKey !== "manageEntitiesView",
   });
   // Removed workFlowsData query from here as WorkFlowsView handles its own data.
+
+  const [editingWorkflowDetails, setEditingWorkflowDetails] = useState<{
+    id: string;
+    name: string;
+    status: string;
+  } | null>(null);
+
+  const handleEditWorkflowDetails = useCallback(
+    (workflow: { id: string; name: string; status: string }) => {
+      setEditingWorkflowDetails(workflow);
+    },
+    []
+  );
 
   const renderMainContent = () => {
     if (authLoading) return <div style={styles.loader}>Authenticating...</div>;
@@ -491,7 +452,7 @@ const Dashboard: React.FC<{
           <WorkFlowsView
             // WorkFlowsView now fetches its own data and doesn't need workFlows, isLoading, isError props from here.
             // It only needs handlers for actions.
-            onEditWorkflowMeta={handleOpenEditWorkflowModal} // For editing name/status via modal
+            onEditWorkflowMeta={handleEditWorkflowDetails} // For editing
             onManageWorkflowSteps={handleNavigateToMaintainWorkflow} // For navigating to step editor
           />
         );
@@ -609,16 +570,6 @@ const Dashboard: React.FC<{
           {/* Ensure client is available to children */}
           <div style={styles.dashboardMain}>{renderMainContent()}</div>
         </ApolloProvider>
-
-        {isEditWorkFlowModalOpen && selectedWorkFlowForModal && (
-          <EditWorkFlowModal
-            workflow={selectedWorkFlowForModal} // This prop name needs to match EditWorkFlowModal
-            isOpen={isEditWorkFlowModalOpen}
-            onClose={handleCloseEditWorkflowModal}
-            onSave={handleSaveWorkflowFromModal} // This expects WorkFlowForm, not WorkFlow
-            // initialData might be needed here if EditWorkFlowModal uses it
-          />
-        )}
       </div>
     </div>
   );

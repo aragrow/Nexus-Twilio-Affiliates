@@ -1,11 +1,11 @@
-// --- Interfaces ---
-interface DashboardProps {
+// --- export interfaces ---
+export interface DashboardProps {
   userId: string | null;
   userName: string | null;
   onLogout: () => void;
 }
 
-interface NavItem {
+export interface NavItem {
   id: string; // Unique ID for key prop and logic
   IconComponent: React.FC<React.SVGProps<SVGSVGElement>>;
   ariaLabel: string; // CRUCIAL for accessibility
@@ -15,14 +15,14 @@ interface NavItem {
   // title?: string;
 }
 
-interface Affiliate {
+export interface Affiliate {
   iD: string;
   companyName: string | null;
   contactName: string | null;
   status?: string;
 }
 
-interface AffiliatesViewProps {
+export interface AffiliatesViewProps {
   affiliates: Affiliate[];
   isLoading: boolean;
   isError: string | null;
@@ -30,7 +30,7 @@ interface AffiliatesViewProps {
   onClients?: (id: string) => void; // 👈 add this
 }
 
-interface Client {
+export interface Client {
   iD: string;
   accountno: string | null;
   clientName: string | null;
@@ -44,7 +44,7 @@ interface Client {
   };
 }
 
-interface ClientsViewProps {
+export interface ClientsViewProps {
   clients: Client[];
   isLoading: boolean;
   isError: string | null;
@@ -52,7 +52,7 @@ interface ClientsViewProps {
   onEntities?: (id: string) => void; // 👈 add this
 }
 
-interface Entity {
+export interface Entity {
   iD: string;
   clientId: string | null;
   entityType: string | null;
@@ -67,7 +67,7 @@ interface Entity {
   id?: string; // if 'id' is different from 'iD' or you want to ensure it exists
 }
 
-interface EntitiesViewProps {
+export interface EntitiesViewProps {
   entities: Entity[];
   isLoading: boolean;
   isError: string | null;
@@ -75,7 +75,7 @@ interface EntitiesViewProps {
   onBilling?: (id: string) => void; // 👈 add this
 }
 
-interface WorkFlow {
+export interface WorkFlow {
   iD: string;
   clientId: string | null;
   workFlowName: string | null;
@@ -85,7 +85,7 @@ interface WorkFlow {
   client?: Client; // The resolved client object (optional if not always fetched)
 }
 
-interface WorkFlowsViewProps {
+export interface WorkFlowsViewProps {
   // Renamed for clarity from worFlowsViewProps
   workFlows: WorkFlow[]; // This will be the potentially FILTERED list from the parent
   allClientsForDropdown: Client[]; // List of all clients specifically for the dropdown population
@@ -102,14 +102,14 @@ interface WorkFlowsViewProps {
   ) => void; // From previous
 }
 
-interface WorkFlowItem extends Entity {
+export interface WorkFlowItem extends Entity {
   wiD: string;
   workFlowName: string | null;
   workFlowOrder: string | null;
   // You might add workflow-specific properties here if needed in the future
 }
 
-interface maintainWorkFlowTableProps {
+export interface maintainWorkFlowTableProps {
   WorkFlow: WorkFlow[];
   clients: Client[];
   isLoading: boolean;
@@ -117,13 +117,13 @@ interface maintainWorkFlowTableProps {
   onSave: (id: string) => void;
 }
 
-interface BackButtonProps {
+export interface BackButtonProps {
   onClick: () => void;
   label?: string;
   className?: string;
 }
 
-interface ModalProps {
+export interface ModalProps {
   isOpen: boolean; // Controls modal visibility
   onClose: () => void; // Function to close the modal
   children: React.ReactNode; // Content to render inside the modal
@@ -132,7 +132,7 @@ interface ModalProps {
 /**
  * Workflow Form Structure
  */
-interface WorkFlowForm {
+export interface WorkFlowForm {
   id?: number; // Optional if editing existing workflow
   client_id: number;
   workflow_name: string;
@@ -143,14 +143,14 @@ interface WorkFlowForm {
  * Edit Workflow Modal Props
  * Used to edit or create a new workflow
  */
-interface EditWorkFlowModalProps {
+export interface EditWorkFlowModalProps {
   isOpen: boolean; // Whether the modal is visible
   onClose: () => void; // Close modal handler
   onSave: (data: WorkFlowForm) => void; // Save action handler
   initialData?: WorkFlowForm; // Optional initial data for editing
 }
 
-interface WorkFlowStep extends Entity {
+export interface WorkFlowStep extends Entity {
   // A step can extend Entity if it shares common fields
   order: number;
   // any other step-specific properties like configuration, etc.
@@ -158,14 +158,14 @@ interface WorkFlowStep extends Entity {
   // Entity already has: iD, clientId, entityType, entityName, etc.
 }
 
-interface WorkFlowStepInput {
+export interface WorkFlowStepInput {
   // For GQL mutation to save steps
   entityId: string; // The ID of the entity that forms this step
   order: number;
   // any other configuration for this step if needed
 }
 
-interface WorkFlowStepEditorProps {
+export interface WorkFlowStepEditorProps {
   workflowId: string;
   workflowName: string;
   clientId: string;
@@ -179,7 +179,7 @@ interface WorkFlowStepEditorProps {
 }
 
 // Define types for our data
-interface WorkflowEntity {
+export interface WorkflowEntity {
   iD: string;
   workflowId: string;
   entityId: string;
@@ -205,29 +205,13 @@ interface WorkflowEntity {
   };
 }
 
-export type {
-  DashboardProps,
-  NavItem,
-  // AFFILIATE TYPES
-  Affiliate,
-  AffiliatesViewProps,
-  // CLIENT TYPES
-  Client,
-  ClientsViewProps,
-  // ENTITY TYPES
-  Entity,
-  EntitiesViewProps,
-  // WORKFLOW TYPES
-  WorkFlow,
-  WorkFlowItem,
-  WorkFlowsViewProps,
-  WorkFlowStep,
-  WorkFlowStepInput,
-  WorkFlowStepEditorProps,
-  WorkflowEntity,
-  maintainWorkFlowTableProps,
-  EditWorkFlowModalProps,
-  BackButtonProps,
-  ModalProps,
-  WorkFlowForm,
-};
+export interface UpdateWorkflowDetailsInput {
+  id: string;
+  name: string;
+  status: string;
+}
+
+export interface EditWorkflowDetailsProps {
+  workflow: WorkFlow;
+  onUpdated?: (workflow: WorkFlow) => void;
+}

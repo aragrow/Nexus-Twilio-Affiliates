@@ -1017,6 +1017,69 @@ class NexusGraphQLTypeRegistrar
                 ],
             ],
         ]);
+
+        register_graphql_mutation('updateWorkflowDetails', [
+            'inputFields' => [
+                'id' => [
+                    'type' => 'ID',
+                    'description' => 'Workflow ID',
+                ],
+                'name' => [
+                    'type' => 'String',
+                    'description' => 'Workflow name',
+                ],
+                'description' => [
+                    'type' => 'String',
+                    'description' => 'Workflow description',
+                ],
+                // Add more fields as needed
+            ],
+            'outputFields' => [
+                'workflow' => [
+                    'type' => 'NexusWorkflow',
+                    'resolve' => function ($payload, $args, $context, $info) {
+                        return $payload['workflow'] ?? null;
+                    }
+                ],
+                'success' => [
+                    'type' => 'Boolean',
+                    'resolve' => fn($payload) => $payload['success'] ?? false,
+                ],
+                'message' => [
+                    'type' => 'String',
+                    'resolve' => fn($payload) => $payload['message'] ?? '',
+                ],
+            ],
+            'mutateAndGetPayload' => function ($input, $context, $info) {
+                global $wpdb;
+                $id = intval($input['id']);
+                $name = sanitize_text_field($input['name']);
+                $description = sanitize_textarea_field($input['description']);
+
+                $updated = $wpdb->update(
+                    "{$wpdb->prefix}nexus_workflows",
+                    ['name' => $name, 'description' => $description],
+                    ['id' => $id]
+                );
+
+                if ($updated !== false) {
+                    $workflow = $wpdb->get_row($wpdb->prepare(
+                        "SELECT * FROM {$wpdb->prefix}nexus_workflows WHERE id = %d",
+                        $id
+                    ));
+                    return [
+                        'workflow' => $workflow,
+                        'success' => true,
+                        'message' => 'Workflow updated successfully.',
+                    ];
+                }
+                return [
+                    'workflow' => null,
+                    'success' => false,
+                    'message' => 'Failed to update workflow.',
+                ];
+            }
+        ]);
     }
 }
 

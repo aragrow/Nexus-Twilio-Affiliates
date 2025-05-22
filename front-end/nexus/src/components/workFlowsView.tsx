@@ -9,7 +9,12 @@ import {
 } from "./graphqlQueries";
 
 interface WorkFlowsViewProps {
-  onEditWorkflowMeta: (workflowId: string) => void;
+  onEditWorkflowMeta: (
+    workflowId: string,
+    workflowName: string, // Corrected: workflowName
+    workflowStatus: string,
+    clientId: string
+  ) => void;
   onManageWorkflowSteps: (
     workflowId: string,
     workflowName: string, // Corrected: workflowName
@@ -96,6 +101,20 @@ const WorkFlowsView: React.FC<WorkFlowsViewProps> = ({
     setClientSearchTerm("");
     setIsClientDropdownOpen(false);
     setCurrentPage(1);
+  };
+
+  const [editingWorkflow, setEditingWorkflow] = useState<{
+    id: string;
+    name: string;
+    status: string;
+  } | null>(null);
+
+  const handleEditWorkflow = (workflow: {
+    id: string;
+    name: string;
+    clientId: string;
+  }) => {
+    setEditingWorkflow(workflow);
   };
 
   // --- Workflow Fetching State ---
@@ -221,12 +240,17 @@ const WorkFlowsView: React.FC<WorkFlowsViewProps> = ({
                     ...workFlowsStyles.actionButton,
                     ...workFlowsStyles.editMetaButton /* Define editMetaButton style */,
                   }}
-                  onClick={() => onEditWorkflowMeta(workflow.iD)}
-                  aria-label={`Edit details for ${
-                    workflow.workFlowName || "workflow"
-                  }`}
+                  aria-label={`Edit details for ${workflow.workFlowName}`}
+                  onClick={() =>
+                    onEditWorkflowMeta(
+                      workflow.iD,
+                      workflow.workFlowName,
+                      workflow.workFlowStatus,
+                      workflow.clientId
+                    )
+                  }
                 >
-                  Edit Details
+                  Edit
                 </button>{" "}
                 |
                 <button
