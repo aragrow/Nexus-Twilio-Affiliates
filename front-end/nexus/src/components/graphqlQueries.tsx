@@ -265,3 +265,36 @@ export const GET_STEP_WORKFLOW_ENTITIES = gql`
     }
   }
 `;
+
+// Add this to components/graphqlQueries.tsx
+
+// Mutation for updating workflow steps
+export const UPDATE_WORKFLOW_STEPS = gql`
+  mutation UpdateWorkflowSteps(
+    $workflowId: ID!
+    $steps: [WorkflowStepInput!]!
+  ) {
+    updateWorkflowSteps(input: { workflowId: $workflowId, steps: $steps }) {
+      success
+      message
+      workflow {
+        iD
+        workFlowName
+        workFlowStatus
+        updatedAt
+      }
+      steps {
+        iD
+        workflowId
+        entityId
+        workflowOrder
+        stepStatus
+        entity {
+          entityName
+          entityPhone
+          entityType
+        }
+      }
+    }
+  }
+`;

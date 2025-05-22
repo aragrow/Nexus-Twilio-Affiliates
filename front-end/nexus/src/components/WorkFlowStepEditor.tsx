@@ -28,9 +28,6 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
   onSave,
   onBack,
 }) => {
-  console.log("workflowId: ", workflowId);
-  console.log("workFlowName: ", workflowName);
-  console.log("clientId: ", clientId);
   const [assignedSteps, setAssignedSteps] = useState<WorkFlowStep[]>([]);
 
   // --- Fetch Available Entities using Apollo Client ---

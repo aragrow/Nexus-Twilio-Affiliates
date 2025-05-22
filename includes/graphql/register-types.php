@@ -851,6 +851,172 @@ class NexusGraphQLTypeRegistrar
                 return $results ?: [];
             },
         ]);
+
+        // --- Register Mutation for Updating Workflow Steps ---
+        register_graphql_mutation('updateWorkflowSteps', [
+            'inputFields' => [
+                'workflowId' => [
+                    'type' => ['non_null' => 'ID'],
+                    'description' => __('The ID of the workflow to update steps for', 'nexus-twilio-affiliates'),
+                ],
+                'steps' => [
+                    'type' => ['non_null' => ['list_of' => 'WorkflowStepInput']],
+                    'description' => __('The ordered list of steps for the workflow', 'nexus-twilio-affiliates'),
+                ],
+            ],
+            'outputFields' => [
+                'success' => [
+                    'type' => 'Boolean',
+                    'description' => __('Whether the operation was successful', 'nexus-twilio-affiliates'),
+                    'resolve' => function ($payload) {
+                        return isset($payload['success']) ? $payload['success'] : false;
+                    }
+                ],
+                'message' => [
+                    'type' => 'String',
+                    'description' => __('Status message about the operation', 'nexus-twilio-affiliates'),
+                    'resolve' => function ($payload) {
+                        return isset($payload['message']) ? $payload['message'] : '';
+                    }
+                ],
+                'workflow' => [
+                    'type' => 'nexusWorkFlow',
+                    'description' => __('The updated workflow', 'nexus-twilio-affiliates'),
+                    'resolve' => function ($payload, $args, $context, $info) use ($wpdb) {
+                        if (empty($payload['workflowId'])) return null;
+
+                        $table_name_workflows = $wpdb->prefix . 'nexus_workflows';
+                        return $wpdb->get_row(
+                            $wpdb->prepare("SELECT * FROM $table_name_workflows WHERE ID = %d", $payload['workflowId'])
+                        );
+                    }
+                ],
+                'steps' => [
+                    'type' => ['list_of' => 'nexusWorkFlowStep'],
+                    'description' => __('The updated workflow steps', 'nexus-twilio-affiliates'),
+                    'resolve' => function ($payload, $args, $context, $info) use ($wpdb) {
+                        if (empty($payload['workflowId'])) return [];
+
+                        $table_name_workflow_entities = $wpdb->prefix . 'nexus_workflows_entities';
+                        return $wpdb->get_results(
+                            $wpdb->prepare(
+                                "SELECT * FROM $table_name_workflow_entities WHERE workflow_id = %d ORDER BY workflow_order ASC",
+                                $payload['workflowId']
+                            )
+                        ) ?: [];
+                    }
+                ],
+            ],
+            'mutateAndGetPayload' => function ($input, $context, $info) {
+                global $wpdb;
+
+                // Validate input
+                if (empty($input['workflowId'])) {
+                    throw new \GraphQL\Error\UserError(__('Workflow ID is required', 'nexus-twilio-affiliates'));
+                }
+
+                if (empty($input['steps']) || !is_array($input['steps'])) {
+                    throw new \GraphQL\Error\UserError(__('Steps array is required', 'nexus-twilio-affiliates'));
+                }
+
+                $workflow_id = absint($input['workflowId']);
+                $table_name_workflows = $wpdb->prefix . 'nexus_workflows';
+                $table_name_workflow_entities = $wpdb->prefix . 'nexus_workflows_entities';
+                $table_name_entities = $wpdb->prefix . 'nexus_entities';
+
+                // Check if workflow exists
+                $workflow = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name_workflows WHERE ID = %d", $workflow_id));
+                if (!$workflow) {
+                    throw new \GraphQL\Error\UserError(__('Workflow not found', 'nexus-twilio-affiliates'));
+                }
+
+                // Start transaction
+                $wpdb->query('START TRANSACTION');
+
+                try {
+                    // Delete existing steps for this workflow
+                    $wpdb->delete(
+                        $table_name_workflow_entities,
+                        ['workflow_id' => $workflow_id],
+                        ['%d']
+                    );
+
+                    if ($wpdb->last_error) {
+                        throw new \Exception($wpdb->last_error);
+                    }
+
+                    // Insert new steps
+                    foreach ($input['steps'] as $index => $step) {
+                        $entity_id = absint($step['entityId']);
+
+                        // Verify entity exists
+                        $entity_exists = $wpdb->get_var(
+                            $wpdb->prepare("SELECT COUNT(*) FROM $table_name_entities WHERE ID = %d", $entity_id)
+                        );
+
+                        if (!$entity_exists) {
+                            throw new \Exception(sprintf(__('Entity with ID %d does not exist', 'nexus-twilio-affiliates'), $entity_id));
+                        }
+
+                        // Insert step
+                        $result = $wpdb->insert(
+                            $table_name_workflow_entities,
+                            [
+                                'workflow_id' => $workflow_id,
+                                'entity_id' => $entity_id,
+                                'workflow_order' => $index,
+                                'step_status' => 'active',
+                            ],
+                            ['%d', '%d', '%d', '%s']
+                        );
+
+                        if ($result === false) {
+                            throw new \Exception($wpdb->last_error ?: __('Failed to insert workflow step', 'nexus-twilio-affiliates'));
+                        }
+                    }
+
+                    // Update workflow's updated_at timestamp
+                    $wpdb->update(
+                        $table_name_workflows,
+                        ['updated_at' => current_time('mysql')],
+                        ['ID' => $workflow_id],
+                        ['%s'],
+                        ['%d']
+                    );
+
+                    // Commit transaction
+                    $wpdb->query('COMMIT');
+
+                    return [
+                        'success' => true,
+                        'message' => __('Workflow steps updated successfully', 'nexus-twilio-affiliates'),
+                        'workflowId' => $workflow_id,
+                    ];
+                } catch (\Exception $e) {
+                    // Rollback on error
+                    $wpdb->query('ROLLBACK');
+
+                    throw new \GraphQL\Error\UserError(
+                        sprintf(__('Error updating workflow steps: %s', 'nexus-twilio-affiliates'), $e->getMessage())
+                    );
+                }
+            }
+        ]);
+
+        // Register the WorkflowStepInput type needed for the mutation
+        register_graphql_input_type('WorkflowStepInput', [
+            'description' => __('Input for a workflow step', 'nexus-twilio-affiliates'),
+            'fields' => [
+                'entityId' => [
+                    'type' => ['non_null' => 'ID'],
+                    'description' => __('The ID of the entity for this step', 'nexus-twilio-affiliates'),
+                ],
+                'order' => [
+                    'type' => 'Int',
+                    'description' => __('The order of this step in the workflow (0-based index)', 'nexus-twilio-affiliates'),
+                ],
+            ],
+        ]);
     }
 }
 

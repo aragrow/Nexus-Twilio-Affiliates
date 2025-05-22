@@ -1,6 +1,7 @@
 // src/components/dashboard.tsx
+
 import React, { useState, useEffect, useCallback } from "react";
-import { ApolloProvider, useQuery /* useMutation */ } from "@apollo/client"; // Added useMutation if you were to implement real save
+import { ApolloProvider, useQuery, useMutation } from "@apollo/client"; // Added useMutation for mutations
 
 // --- Component Imports ---
 import AffiliatesView from "./affiliatesView";
@@ -21,7 +22,8 @@ import {
   GET_MANAGE_ENTITIES,
   GET_MANAGE_WORKFLOWS, // This is for the list view
   GET_WORKFLOW, // This is for editing workflow metadata (name, status)
-  // UPDATE_WORKFLOW_STEPS, // Placeholder for actual GQL mutation
+  UPDATE_WORKFLOW_STEPS, // Placeholder for actual GQL mutation
+  GET_STEP_WORKFLOW_ENTITIES,
 } from "./graphqlQueries";
 
 // --- Type Imports ---
@@ -227,7 +229,6 @@ const useDashboardLogic = () => {
   const handleNavigateToMaintainWorkflow = useCallback(
     (workflowId: string, workflowName: string, clientId: string) => {
       setEditingWorkflow({ id: workflowId, name: workflowName, clientId });
-      console.log("workflowId: ", workflowId);
       // currentLevelKey remains 'LoadWorkFlowsView', the content within it changes
     },
     []
@@ -277,10 +278,12 @@ const useDashboardLogic = () => {
     []
   );
 
-  // --- Placeholder for actual GQL mutation hook ---
-  // const [updateWorkflowStepsMutation, { loading: isSavingSteps, error: saveStepsError }] =
-  //   useMutation(UPDATE_WORKFLOW_STEPS);
+  // Add this hook in the Dashboard component
+  const [updateWorkflowStepsMutation, { loading: isSavingSteps }] = useMutation(
+    UPDATE_WORKFLOW_STEPS
+  );
 
+  // Replace the handleSaveWorkflowSteps function
   const handleSaveWorkflowSteps = useCallback(
     async (workflowId: string, updatedSteps: WorkFlowStepInput[]) => {
       console.log(
@@ -288,48 +291,43 @@ const useDashboardLogic = () => {
         workflowId,
         updatedSteps
       );
-      // --- THIS IS WHERE YOU'D CALL YOUR ACTUAL GQL MUTATION ---
-      // try {
-      //   setIsSavingSteps(true); // You'd need state for this
-      //   const { data } = await updateWorkflowStepsMutation({
-      //     variables: { workflowId, steps: updatedSteps },
-      //     // May need to refetch GET_WORKFLOW_STEPS or update Apollo cache manually
-      //     // or refetch GET_MANAGE_WORKFLOWS if step count/summary changes
-      //   });
-      //   console.log("Workflow steps saved successfully via GQL:", data);
-      //   alert("Workflow steps saved successfully!"); // Replace with a proper notification
-      //   handleExitMaintainWorkflow(); // Go back to the list view
-      // } catch (err) {
-      //   console.error("Failed to save workflow steps via GQL:", err);
-      //   alert(`Error saving steps: ${err.message}`); // Replace with a proper notification
-      //   throw err; // Re-throw so the editor can also handle it if needed
-      // } finally {
-      //   setIsSavingSteps(false);
-      // }
-      // --- END GQL MUTATION CALL ---
 
-      // Mock saving behavior:
-      return new Promise<void>((resolve, reject) => {
-        // Make it async to match editor's expectation
-        setTimeout(() => {
-          alert(
-            `Mock Save!\nWorkflow ID: ${workflowId}\nSteps: ${JSON.stringify(
-              updatedSteps,
-              null,
-              2
-            )}`
-          );
-          console.log(
-            "Mock saved steps for workflow:",
+      try {
+        const { data } = await updateWorkflowStepsMutation({
+          variables: {
             workflowId,
-            updatedSteps
+            steps: updatedSteps,
+          },
+          refetchQueries: [
+            { query: GET_STEP_WORKFLOW_ENTITIES, variables: { workflowId } },
+          ],
+        });
+
+        console.log("Workflow steps saved successfully:", data);
+
+        if (data?.updateWorkflowSteps?.success) {
+          // Show success notification
+          alert(
+            data.updateWorkflowSteps.message ||
+              "Workflow steps saved successfully!"
           );
-          handleExitMaintainWorkflow(); // Navigate back after "save"
-          resolve();
-        }, 500);
-      });
+          handleExitMaintainWorkflow(); // Go back to the list view
+        } else {
+          // Show error notification
+          alert(
+            data?.updateWorkflowSteps?.message || "Error saving workflow steps"
+          );
+        }
+      } catch (err) {
+        console.error("Failed to save workflow steps:", err);
+        alert(
+          `Error saving steps: ${
+            err instanceof Error ? err.message : "Unknown error"
+          }`
+        );
+      }
     },
-    [handleExitMaintainWorkflow /*, updateWorkflowStepsMutation */]
+    [updateWorkflowStepsMutation, handleExitMaintainWorkflow]
   );
 
   return {

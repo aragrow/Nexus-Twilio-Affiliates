@@ -217,6 +217,19 @@ const WorkFlowsView: React.FC<WorkFlowsViewProps> = ({
               </td>
               <td style={workFlowsStyles.tableCell} data-label="Actions:">
                 <button
+                  style={{
+                    ...workFlowsStyles.actionButton,
+                    ...workFlowsStyles.editMetaButton /* Define editMetaButton style */,
+                  }}
+                  onClick={() => onEditWorkflowMeta(workflow.iD)}
+                  aria-label={`Edit details for ${
+                    workflow.workFlowName || "workflow"
+                  }`}
+                >
+                  Edit Details
+                </button>{" "}
+                |
+                <button
                   style={workFlowsStyles.actionButton}
                   onClick={() =>
                     onManageWorkflowSteps(
@@ -230,18 +243,6 @@ const WorkFlowsView: React.FC<WorkFlowsViewProps> = ({
                   }`}
                 >
                   Manage Steps
-                </button>
-                <button
-                  style={{
-                    ...workFlowsStyles.actionButton,
-                    ...workFlowsStyles.editMetaButton /* Define editMetaButton style */,
-                  }}
-                  onClick={() => onEditWorkflowMeta(workflow.iD)}
-                  aria-label={`Edit details for ${
-                    workflow.workFlowName || "workflow"
-                  }`}
-                >
-                  Edit Details
                 </button>
               </td>
             </tr>
