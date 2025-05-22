@@ -165,6 +165,15 @@ export interface WorkFlowStepInput {
   // any other configuration for this step if needed
 }
 
+//  ####
+export interface workFlowDetailInput {
+  // For GQL mutation to save steps
+  workflowId: string; // The ID of the entity that forms this step
+  workflowName: string;
+  workflowStatus: string;
+  // any other configuration for this step if needed
+}
+
 export interface WorkFlowStepEditorProps {
   workflowId: string;
   workflowName: string;
@@ -213,5 +222,5 @@ export interface UpdateWorkflowDetailsInput {
 
 export interface EditWorkflowDetailsProps {
   workflow: WorkFlow;
-  onUpdated?: (workflow: WorkFlow) => void;
+  onSave?: (workflow: WorkFlow) => void;
 }

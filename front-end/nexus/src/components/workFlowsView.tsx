@@ -244,9 +244,9 @@ const WorkFlowsView: React.FC<WorkFlowsViewProps> = ({
                   onClick={() =>
                     onEditWorkflowMeta(
                       workflow.iD,
-                      workflow.workFlowName,
-                      workflow.workFlowStatus,
-                      workflow.clientId
+                      workflow.workFlowName || "",
+                      workflow.workFlowStatus || "",
+                      workflow.clientId || ""
                     )
                   }
                 >
