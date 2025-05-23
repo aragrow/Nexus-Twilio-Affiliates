@@ -75,6 +75,46 @@ export interface EntitiesViewProps {
   onBilling?: (id: string) => void; // 👈 add this
 }
 
+export interface EntityFormInput {
+  name: string;
+  type: "individual" | "group";
+  description?: string;
+  clientId: number;
+  status: "active" | "inactive";
+}
+
+export interface AddEntityInput extends EntityFormInput {}
+
+export interface UpdateEntityInput extends EntityFormInput {
+  id: number;
+}
+
+export interface EntityFormProps {
+  initialValues: EntityFormInput;
+  clients: Client[];
+  onSubmit: (values: EntityFormInput) => Promise<void>;
+  isSubmitting: boolean;
+  submitButtonText: string;
+  onCancel: () => void;
+}
+
+export interface AddEntityProps {
+  onSuccess: (entity: Entity) => void;
+  onCancel: () => void;
+}
+
+export interface UpdateEntityProps {
+  entity: Entity;
+  onSuccess: (entity: Entity) => void;
+  onCancel: () => void;
+}
+
+export interface EntityResponse {
+  success: boolean;
+  message: string;
+  entity: Entity;
+}
+
 export interface WorkFlow {
   iD: string;
   clientId: string | null;
@@ -143,7 +183,7 @@ export interface WorkFlowForm {
  * Edit Workflow Modal Props
  * Used to edit or create a new workflow
  */
-export interface EditWorkFlowModalProps {
+export interface EditWorkFlowModalProps-DElete {
   isOpen: boolean; // Whether the modal is visible
   onClose: () => void; // Close modal handler
   onSave: (data: WorkFlowForm) => void; // Save action handler
@@ -175,13 +215,20 @@ export interface workFlowDetailInput {
 }
 
 export interface WorkFlowStepEditorProps {
-  workflowId: string;
-  workflowName: string;
-  clientId: string;
+  workflow: WorkFlow;
   onSave: (
     workflowId: string,
-    workflowName: string,
-    clientId: string,
+    updatedSteps: WorkFlowStepInput[]
+  ) => Promise<void>; // Async save handler
+  onBack: () => void; // Handler to go back to the previous view
+}
+
+export interface WorkFlowStepEditorProps-2 {
+  workflowId: string;
+  workflowName: string;
+  clientId: string; // Context for which client this workflow belongs to
+  onSave: (
+    workflowId: string,
     updatedSteps: WorkFlowStepInput[]
   ) => Promise<void>; // Async save handler
   onBack: () => void; // Handler to go back to the previous view
@@ -223,4 +270,5 @@ export interface UpdateWorkflowDetailsInput {
 export interface EditWorkflowDetailsProps {
   workflow: WorkFlow;
   onSave?: (workflow: WorkFlow) => void;
+  onBack?: (workflow: WorkFlow) => void;
 }

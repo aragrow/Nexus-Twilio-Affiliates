@@ -7,10 +7,11 @@ import type {
   DraggableProvided,
   DraggableStateSnapshot,
 } from "@hello-pangea/dnd";
-import { useQuery } from "@apollo/client";
+import { useQuery, useMutation } from "@apollo/client";
 import {
   GET_AVAILABLE_CLIENT_ENTITIES,
   GET_STEP_WORKFLOW_ENTITIES,
+  UPDATE_WORKFLOW_STEPS,
 } from "./graphqlQueries";
 import type {
   Entity,
@@ -22,23 +23,20 @@ import type {
 import editorStyles from "./workFlowStepEditorStyles";
 
 const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
-  workflowId,
-  workflowName,
-  clientId,
+  workflow,
   onSave,
   onBack,
 }) => {
   const [assignedSteps, setAssignedSteps] = useState<WorkFlowStep[]>([]);
-
   // --- Fetch Available Entities using Apollo Client ---
   const {
     loading: isLoadingAvailableEntities,
     error: errorAvailableEntities,
     data: dataAvailableEntities,
   } = useQuery<{ nexusEntities: Entity[] }>(GET_AVAILABLE_CLIENT_ENTITIES, {
-    variables: { clientId: clientId },
+    variables: { clientId: workflow.clientId },
     fetchPolicy: "cache-and-network",
-    skip: !clientId,
+    skip: !workflow.clientId,
   });
 
   // Derived available entities from query data
@@ -54,9 +52,9 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
   } = useQuery<{ nexusWorkflowEntitiesByWorkflowId: WorkflowEntity[] }>(
     GET_STEP_WORKFLOW_ENTITIES,
     {
-      variables: { workflowId: workflowId },
+      variables: { workflowId: workflow.iD },
       fetchPolicy: "cache-and-network",
-      skip: !workflowId,
+      skip: !workflow.iD,
     }
   );
 
@@ -181,15 +179,18 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveChanges = async () => {
-    const stepsToSave: WorkFlowStepInput[] = assignedSteps.map(
+    console.log("workFlowStepEditor.tsx - handleSaveChanges");
+    const updatedSteps: WorkFlowStepInput[] = assignedSteps.map(
       (step, index) => ({
-        entityId: step.entityId || step.id || step.iD,
+        entityId: step.id || step.iD,
         order: index,
       })
     );
     try {
       setIsSaving(true);
-      await onSave(workflowId, stepsToSave);
+      console.log("workflow.iD: ", workflow.iD);
+      console.log("updatedSteps: ", updatedSteps);
+      await handleSaveWorkflowSteps(workflow.iD, updatedSteps);
     } catch (err) {
       console.error(
         "Save failed in WorkFlowStepEditor's handleSaveChanges",
@@ -197,8 +198,72 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
       );
     } finally {
       setIsSaving(false);
+      console.log("Step Save finalized.");
     }
   };
+  // Add this hook in the Dashboard component
+  const [updateWorkflowStepsMutation, { loading: isSavingSteps }] = useMutation(
+    UPDATE_WORKFLOW_STEPS
+  );
+
+  const [editingWorkflow, setEditingWorkflow] = useState<{
+    id: string;
+    name: string;
+    clientiD: string;
+  } | null>(null);
+
+  const handleExitMaintainWorkflow = useCallback(() => {
+    console.log("handleExitMaintainWorkflow");
+    setEditingWorkflow(null);
+    // currentLevelKey should remain 'LoadWorkFlowsView' to show the list again
+  }, []);
+
+  // Replace the handleSaveWorkflowSteps function
+  const handleSaveWorkflowSteps = useCallback(
+    async (workflowId: string, updatedSteps: WorkFlowStepInput[]) => {
+      console.log(
+        "Dashboard: Attempting to save steps for workflow:",
+        workflowId,
+        updatedSteps
+      );
+
+      try {
+        const { data } = await updateWorkflowStepsMutation({
+          variables: {
+            workflowId,
+            steps: updatedSteps,
+          },
+          refetchQueries: [
+            { query: GET_STEP_WORKFLOW_ENTITIES, variables: { workflowId } },
+          ],
+        });
+
+        console.log("Workflow steps saved successfully:", data);
+
+        if (data?.updateWorkflowSteps?.success) {
+          // Show success notification
+          alert(
+            data.updateWorkflowSteps.message ||
+              "Workflow steps saved successfully!"
+          );
+          handleExitMaintainWorkflow(); // Go back to the list view
+        } else {
+          // Show error notification
+          alert(
+            data?.updateWorkflowSteps?.message || "Error saving workflow steps"
+          );
+        }
+      } catch (err) {
+        console.error("Failed to save workflow steps:", err);
+        alert(
+          `Error saving steps: ${
+            err instanceof Error ? err.message : "Unknown error"
+          }`
+        );
+      }
+    },
+    [updateWorkflowStepsMutation, handleExitMaintainWorkflow]
+  );
 
   // Initial loading screen
   if (
@@ -218,7 +283,9 @@ const WorkFlowStepEditor: React.FC<WorkFlowStepEditorProps> = ({
   return (
     <div style={editorStyles.container}>
       <div style={editorStyles.header}>
-        <h2 style={editorStyles.title}>Manage Steps for: {workflowName}</h2>
+        <h2 style={editorStyles.title}>
+          Manage Steps for: {workflow.workFlowName}
+        </h2>
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>

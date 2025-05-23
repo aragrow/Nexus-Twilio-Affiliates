@@ -1080,6 +1080,432 @@ class NexusGraphQLTypeRegistrar
                 ];
             }
         ]);
+
+        // Register Entity Type
+        add_action('graphql_register_types', 'register_entity_types');
+        function register_entity_types()
+        {
+            register_graphql_object_type('Entity', [
+                'description' => 'An entity that can be an individual or a group',
+                'fields' => [
+                    'id' => [
+                        'type' => 'ID',
+                        'description' => 'The ID of the entity',
+                    ],
+                    'name' => [
+                        'type' => 'String',
+                        'description' => 'The name of the entity',
+                    ],
+                    'type' => [
+                        'type' => 'String',
+                        'description' => 'The type of entity (individual or group)',
+                    ],
+                    'description' => [
+                        'type' => 'String',
+                        'description' => 'The description of the entity',
+                    ],
+                    'clientId' => [
+                        'type' => 'Int',
+                        'description' => 'The client ID associated with this entity',
+                    ],
+                    'status' => [
+                        'type' => 'String',
+                        'description' => 'The status of the entity (active or inactive)',
+                    ],
+                    'createdAt' => [
+                        'type' => 'String',
+                        'description' => 'The date the entity was created',
+                    ],
+                    'updatedAt' => [
+                        'type' => 'String',
+                        'description' => 'The date the entity was last updated',
+                    ],
+                ],
+            ]);
+
+            // Register Client Type (if not already registered elsewhere)
+            register_graphql_object_type('Client', [
+                'description' => 'A client',
+                'fields' => [
+                    'id' => [
+                        'type' => 'ID',
+                        'description' => 'The ID of the client',
+                    ],
+                    'name' => [
+                        'type' => 'String',
+                        'description' => 'The name of the client',
+                    ],
+                    'status' => [
+                        'type' => 'String',
+                        'description' => 'The status of the client (active or inactive)',
+                    ],
+                ],
+            ]);
+
+            // Register Entity Response Type
+            register_graphql_object_type('EntityResponse', [
+                'description' => 'Response after entity mutation',
+                'fields' => [
+                    'success' => [
+                        'type' => 'Boolean',
+                        'description' => 'Whether the operation was successful',
+                    ],
+                    'message' => [
+                        'type' => 'String',
+                        'description' => 'Message about the operation',
+                    ],
+                    'entity' => [
+                        'type' => 'Entity',
+                        'description' => 'The entity that was created or updated',
+                    ],
+                ],
+            ]);
+
+            // Register Input Types
+            register_graphql_input_type('AddEntityInput', [
+                'description' => 'Input for adding a new entity',
+                'fields' => [
+                    'name' => [
+                        'type' => ['non_null' => 'String'],
+                        'description' => 'The name of the entity',
+                    ],
+                    'type' => [
+                        'type' => ['non_null' => 'String'],
+                        'description' => 'The type of entity (individual or group)',
+                    ],
+                    'description' => [
+                        'type' => 'String',
+                        'description' => 'The description of the entity',
+                    ],
+                    'clientId' => [
+                        'type' => ['non_null' => 'Int'],
+                        'description' => 'The client ID associated with this entity',
+                    ],
+                    'status' => [
+                        'type' => ['non_null' => 'String'],
+                        'description' => 'The status of the entity (active or inactive)',
+                    ],
+                ],
+            ]);
+
+            register_graphql_input_type('UpdateEntityInput', [
+                'description' => 'Input for updating an entity',
+                'fields' => [
+                    'id' => [
+                        'type' => ['non_null' => 'ID'],
+                        'description' => 'The ID of the entity to update',
+                    ],
+                    'name' => [
+                        'type' => ['non_null' => 'String'],
+                        'description' => 'The name of the entity',
+                    ],
+                    'type' => [
+                        'type' => ['non_null' => 'String'],
+                        'description' => 'The type of entity (individual or group)',
+                    ],
+                    'description' => [
+                        'type' => 'String',
+                        'description' => 'The description of the entity',
+                    ],
+                    'clientId' => [
+                        'type' => ['non_null' => 'Int'],
+                        'description' => 'The client ID associated with this entity',
+                    ],
+                    'status' => [
+                        'type' => ['non_null' => 'String'],
+                        'description' => 'The status of the entity (active or inactive)',
+                    ],
+                ],
+            ]);
+        }
+
+        // Register Queries
+        add_action('graphql_register_types', 'register_entity_queries');
+        function register_entity_queries()
+        {
+            // Query to get all entities
+            register_graphql_field('RootQuery', 'entities', [
+                'description' => 'Get all entities',
+                'type' => ['list_of' => 'Entity'],
+                'resolve' => function ($source, $args, $context, $info) {
+                    global $wpdb;
+                    $table_name = $wpdb->prefix . 'nexus_entities';
+
+                    $results = $wpdb->get_results("SELECT * FROM $table_name ORDER BY name ASC", ARRAY_A);
+
+                    return array_map(function ($entity) {
+                        return [
+                            'id' => (int) $entity['id'],
+                            'name' => $entity['name'],
+                            'type' => $entity['type'],
+                            'description' => $entity['description'],
+                            'clientId' => (int) $entity['client_id'],
+                            'status' => $entity['status'],
+                            'createdAt' => $entity['created_at'],
+                            'updatedAt' => $entity['updated_at'],
+                        ];
+                    }, $results);
+                }
+            ]);
+
+            // Query to get a single entity by ID
+            register_graphql_field('RootQuery', 'entity', [
+                'description' => 'Get a single entity by ID',
+                'type' => 'Entity',
+                'args' => [
+                    'id' => [
+                        'type' => ['non_null' => 'ID'],
+                        'description' => 'The ID of the entity',
+                    ],
+                ],
+                'resolve' => function ($source, $args, $context, $info) {
+                    global $wpdb;
+                    $table_name = $wpdb->prefix . 'nexus_entities';
+
+                    $entity = $wpdb->get_row(
+                        $wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $args['id']),
+                        ARRAY_A
+                    );
+
+                    if (!$entity) {
+                        throw new \GraphQL\Error\UserError('Entity not found');
+                    }
+
+                    return [
+                        'id' => (int) $entity['id'],
+                        'name' => $entity['name'],
+                        'type' => $entity['type'],
+                        'description' => $entity['description'],
+                        'clientId' => (int) $entity['client_id'],
+                        'status' => $entity['status'],
+                        'createdAt' => $entity['created_at'],
+                        'updatedAt' => $entity['updated_at'],
+                    ];
+                }
+            ]);
+
+            // Query to get active clients
+            register_graphql_field('RootQuery', 'activeClients', [
+                'description' => 'Get all active clients',
+                'type' => ['list_of' => 'Client'],
+                'resolve' => function ($source, $args, $context, $info) {
+                    global $wpdb;
+                    $table_name = $wpdb->prefix . 'nexus_clients';
+
+                    $results = $wpdb->get_results(
+                        "SELECT * FROM $table_name WHERE status = 'active' ORDER BY name ASC",
+                        ARRAY_A
+                    );
+
+                    return array_map(function ($client) {
+                        return [
+                            'id' => (int) $client['id'],
+                            'name' => $client['name'],
+                            'status' => $client['status'],
+                        ];
+                    }, $results);
+                }
+            ]);
+        }
+
+        // Register Mutations
+        add_action('graphql_register_types', 'register_entity_mutations');
+        function register_entity_mutations()
+        {
+            // Mutation to add a new entity
+            register_graphql_mutation('addEntity', [
+                'inputFields' => [
+                    'input' => [
+                        'type' => ['non_null' => 'AddEntityInput'],
+                        'description' => 'Input for the addEntity mutation',
+                    ],
+                ],
+                'outputFields' => [
+                    'success' => [
+                        'type' => 'Boolean',
+                        'description' => 'Whether the operation was successful',
+                    ],
+                    'message' => [
+                        'type' => 'String',
+                        'description' => 'Message about the operation',
+                    ],
+                    'entity' => [
+                        'type' => 'Entity',
+                        'description' => 'The entity that was created',
+                    ],
+                ],
+                'mutateAndGetPayload' => function ($input, $context, $info) {
+                    global $wpdb;
+                    $table_name = $wpdb->prefix . 'nexus_entities';
+
+                    // Validate input
+                    if (empty($input['name'])) {
+                        throw new \GraphQL\Error\UserError('Entity name is required');
+                    }
+
+                    if (!in_array($input['type'], ['individual', 'group'])) {
+                        throw new \GraphQL\Error\UserError('Entity type must be either individual or group');
+                    }
+
+                    if (!in_array($input['status'], ['active', 'inactive'])) {
+                        throw new \GraphQL\Error\UserError('Entity status must be either active or inactive');
+                    }
+
+                    // Check if client exists
+                    $client_table = $wpdb->prefix . 'nexus_clients';
+                    $client_exists = $wpdb->get_var(
+                        $wpdb->prepare("SELECT COUNT(*) FROM $client_table WHERE id = %d", $input['clientId'])
+                    );
+
+                    if (!$client_exists) {
+                        throw new \GraphQL\Error\UserError('Client does not exist');
+                    }
+
+                    // Insert entity
+                    $result = $wpdb->insert(
+                        $table_name,
+                        [
+                            'name' => $input['name'],
+                            'type' => $input['type'],
+                            'description' => $input['description'] ?? '',
+                            'client_id' => $input['clientId'],
+                            'status' => $input['status'],
+                            'created_at' => current_time('mysql'),
+                            'updated_at' => current_time('mysql'),
+                        ],
+                        ['%s', '%s', '%s', '%d', '%s', '%s', '%s']
+                    );
+
+                    if ($result === false) {
+                        throw new \GraphQL\Error\UserError('Failed to create entity: ' . $wpdb->last_error);
+                    }
+
+                    $entity_id = $wpdb->insert_id;
+
+                    // Get the newly created entity
+                    $entity = $wpdb->get_row(
+                        $wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $entity_id),
+                        ARRAY_A
+                    );
+
+                    return [
+                        'success' => true,
+                        'message' => 'Entity created successfully',
+                        'entity' => [
+                            'id' => (int) $entity['id'],
+                            'name' => $entity['name'],
+                            'type' => $entity['type'],
+                            'description' => $entity['description'],
+                            'clientId' => (int) $entity['client_id'],
+                            'status' => $entity['status'],
+                            'createdAt' => $entity['created_at'],
+                            'updatedAt' => $entity['updated_at'],
+                        ],
+                    ];
+                }
+            ]);
+
+            // Mutation to update an entity
+            register_graphql_mutation('updateEntity', [
+                'inputFields' => [
+                    'input' => [
+                        'type' => ['non_null' => 'UpdateEntityInput'],
+                        'description' => 'Input for the updateEntity mutation',
+                    ],
+                ],
+                'outputFields' => [
+                    'success' => [
+                        'type' => 'Boolean',
+                        'description' => 'Whether the operation was successful',
+                    ],
+                    'message' => [
+                        'type' => 'String',
+                        'description' => 'Message about the operation',
+                    ],
+                    'entity' => [
+                        'type' => 'Entity',
+                        'description' => 'The entity that was updated',
+                    ],
+                ],
+                'mutateAndGetPayload' => function ($input, $context, $info) {
+                    global $wpdb;
+                    $table_name = $wpdb->prefix . 'nexus_entities';
+
+                    // Validate input
+                    if (empty($input['name'])) {
+                        throw new \GraphQL\Error\UserError('Entity name is required');
+                    }
+
+                    if (!in_array($input['type'], ['individual', 'group'])) {
+                        throw new \GraphQL\Error\UserError('Entity type must be either individual or group');
+                    }
+
+                    if (!in_array($input['status'], ['active', 'inactive'])) {
+                        throw new \GraphQL\Error\UserError('Entity status must be either active or inactive');
+                    }
+
+                    // Check if entity exists
+                    $entity_exists = $wpdb->get_var(
+                        $wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE id = %d", $input['id'])
+                    );
+
+                    if (!$entity_exists) {
+                        throw new \GraphQL\Error\UserError('Entity does not exist');
+                    }
+
+                    // Check if client exists
+                    $client_table = $wpdb->prefix . 'nexus_clients';
+                    $client_exists = $wpdb->get_var(
+                        $wpdb->prepare("SELECT COUNT(*) FROM $client_table WHERE id = %d", $input['clientId'])
+                    );
+
+                    if (!$client_exists) {
+                        throw new \GraphQL\Error\UserError('Client does not exist');
+                    }
+
+                    // Update entity
+                    $result = $wpdb->update(
+                        $table_name,
+                        [
+                            'name' => $input['name'],
+                            'type' => $input['type'],
+                            'description' => $input['description'] ?? '',
+                            'client_id' => $input['clientId'],
+                            'status' => $input['status'],
+                            'updated_at' => current_time('mysql'),
+                        ],
+                        ['id' => $input['id']],
+                        ['%s', '%s', '%s', '%d', '%s', '%s'],
+                        ['%d']
+                    );
+
+                    if ($result === false) {
+                        throw new \GraphQL\Error\UserError('Failed to update entity: ' . $wpdb->last_error);
+                    }
+
+                    // Get the updated entity
+                    $entity = $wpdb->get_row(
+                        $wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $input['id']),
+                        ARRAY_A
+                    );
+
+                    return [
+                        'success' => true,
+                        'message' => 'Entity updated successfully',
+                        'entity' => [
+                            'id' => (int) $entity['id'],
+                            'name' => $entity['name'],
+                            'type' => $entity['type'],
+                            'description' => $entity['description'],
+                            'clientId' => (int) $entity['client_id'],
+                            'status' => $entity['status'],
+                            'createdAt' => $entity['created_at'],
+                            'updatedAt' => $entity['updated_at'],
+                        ],
+                    ];
+                }
+            ]);
+        }
     }
 }
 

@@ -10,17 +10,15 @@ import type {
 } from "./interface";
 
 const WorkflowDetailsEditor: React.FC<EditWorkflowDetailsProps> = ({
-  workflowId,
-  workflowName,
-  clientId,
+  workflow,
   onSave,
   onBack,
 }) => {
   const [form, setForm] = useState<UpdateWorkflowDetailsInput>({
-    name: workflowName || "",
+    name: workflow.workFlowName || "",
     status: "active", // Default to active
-    workflowId: workflowId,
-    clientId: clientId,
+    id: workflow.iD,
+    workflow: workflow,
   });
 
   const [updateWorkflowDetails, { isLoading, error, data }] = useMutation(

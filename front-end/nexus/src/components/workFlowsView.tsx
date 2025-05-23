@@ -1,12 +1,18 @@
-// src/components/WorkFlowsView.tsx
-import React, { useState, useMemo, useEffect } from "react";
-import workFlowsStyles from "./workFlowsStyles";
-import type { Client, WorkFlow } from "./interface"; // WorkFlow interface should have workFlowName
-import { useLazyQuery, useQuery } from "@apollo/client";
+// WorkflowView.tsx
+import React, { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@apollo/client";
 import {
-  GET_CLIENTS_FOR_SEARCH,
+  GET_MANAGE_WORKFLOWS,
   GET_NEXUS_WORKFLOWS_BY_CLIENT,
 } from "./graphqlQueries";
+import type { WorkFlow } from "./interface";
+import { styles } from "./workFlowsStyles";
+// Import other components you might be using
+import WorkflowDetailsEditor from "./WorkflowDetailsEditor";
+import WorkflowStepEditor from "./WorkflowStepEditor";
+
+//import AddWorkflow from "./AddWorkflow";
+// ... other imports
 
 interface WorkFlowsViewProps {
   onEditWorkflowMeta: (
@@ -22,395 +28,421 @@ interface WorkFlowsViewProps {
   ) => void;
 }
 
-const ITEMS_PER_PAGE = 15;
-const MIN_CLIENT_SEARCH_TERM_LENGTH = 3; // Or 0 to allow empty search for initial list
-const CLIENT_SEARCH_DEBOUNCE_MS = 300;
+const WorkflowView: React.FC = () => {
+  // State for workflow management
+  const [selectedWorkflow, setSelectedWorkflow] = useState<WorkFlow | null>(
+    null
+  );
+  const [mode, setMode] = useState<"list" | "add" | "edit" | "view">("list");
 
-const WorkFlowsView: React.FC<WorkFlowsViewProps> = ({
-  onEditWorkflowMeta,
-  onManageWorkflowSteps,
-}) => {
-  // ... (client search state and logic remains the same) ...
-  const [clientSearchTerm, setClientSearchTerm] = useState("");
-  const [clientSearchResults, setClientSearchResults] = useState<Client[]>([]);
-  const [selectedClientFilter, setSelectedClientFilter] =
-    useState<Client | null>(null);
-  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+  // Search state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredWorkflows, setFilteredWorkflows] = useState<WorkFlow[]>([]);
 
-  const [
-    searchClientsGQL,
-    {
-      loading: isClientSearchLoading,
-      error: clientSearchError,
-      data: clientSearchDataGQL,
-    },
-  ] = useLazyQuery<{ nexusClients: Client[] }>(GET_CLIENTS_FOR_SEARCH, {
-    fetchPolicy: "network-only",
-    onCompleted: (data) => setClientSearchResults(data?.nexusClients || []),
-    onError: (error) => {
-      console.error("Error searching clients:", error);
-      setClientSearchResults([]);
-    },
-  });
-
-  useEffect(() => {
-    if (clientSearchTerm.length === 0 && !selectedClientFilter) {
-      // Added !selectedClientFilter
-      // Optionally fetch all clients or a default set if search term is empty and no filter active
-      // searchClientsGQL({ variables: { term: "", first: 10 } }); // Example
-      setClientSearchResults([]); // Or clear results
-      // return; // Keep this if you don't want to auto-fetch on empty
-    }
-    if (
-      clientSearchTerm.length < MIN_CLIENT_SEARCH_TERM_LENGTH &&
-      clientSearchTerm.length > 0
-    ) {
-      // Allow 0 length to clear
-      setClientSearchResults([]);
-      return;
-    }
-    const handler = setTimeout(() => {
-      if (
-        clientSearchTerm.length >= MIN_CLIENT_SEARCH_TERM_LENGTH ||
-        clientSearchTerm.length === 0
-      ) {
-        // Allow search for empty term if desired
-        searchClientsGQL({ variables: { term: clientSearchTerm, first: 10 } });
-      }
-    }, CLIENT_SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(handler);
-  }, [clientSearchTerm, searchClientsGQL, selectedClientFilter]); // Added selectedClientFilter
-
-  const handleClientSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const term = e.target.value;
-    setClientSearchTerm(term);
-    if (term.length >= MIN_CLIENT_SEARCH_TERM_LENGTH || term.length === 0)
-      setIsClientDropdownOpen(true);
-    else setIsClientDropdownOpen(false);
-  };
-
-  const handleSelectClientFromDropdown = (client: Client) => {
-    setSelectedClientFilter(client);
-    setClientSearchTerm(client.clientName || ""); // Ensure clientName is not null
-    setIsClientDropdownOpen(false);
-    setCurrentPage(1);
-  };
-
-  const clearClientFilter = () => {
-    setSelectedClientFilter(null);
-    setClientSearchTerm("");
-    setIsClientDropdownOpen(false);
-    setCurrentPage(1);
-  };
-
-  const [editingWorkflow, setEditingWorkflow] = useState<{
-    id: string;
-    name: string;
-    status: string;
-  } | null>(null);
-
-  const handleEditWorkflow = (workflow: {
-    id: string;
-    name: string;
-    clientId: string;
-  }) => {
-    setEditingWorkflow(workflow);
-  };
-
-  // --- Workflow Fetching State ---
+  // Pagination state (if you're using pagination)
   const [currentPage, setCurrentPage] = useState(1);
-  const {
-    data: workFlowsData,
-    loading: workFlowsLoading,
-    error: workFlowsError,
-    // refetch, // refetch can be used if needed
-  } = useQuery<{
-    nexusWorkFlows: WorkFlow[]; // Assuming schema returns WorkFlow[] directly now for simplicity with client-side pagination
-    // If it's { workflows: WorkFlow[], totalCount: number }, adjust accordingly
-  }>(GET_NEXUS_WORKFLOWS_BY_CLIENT, {
-    variables: {
-      clientId: selectedClientFilter ? selectedClientFilter.iD : null,
-      status: "active", // Example filter
-      // Removed pagination variables here, assuming client-side pagination for this example
-      // first: ITEMS_PER_PAGE,
-      // offset: (currentPage - 1) * ITEMS_PER_PAGE,
-    },
-    fetchPolicy: "cache-and-network",
-  });
+  const [pageSize, setPageSize] = useState(10);
+  const [paginatedWorkflows, setPaginatedWorkflows] = useState<WorkFlow[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Client-side pagination if GET_NEXUS_WORKFLOWS_BY_CLIENT doesn't support it
-  const currentWorkflows = workFlowsData?.nexusWorkFlows || [];
-  const paginatedWorkFlows = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return currentWorkflows.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [currentWorkflows, currentPage]);
+  // Fetch workflows
+  const { data, loading, error, refetch } = useQuery(GET_MANAGE_WORKFLOWS);
 
-  const totalPages = Math.ceil(currentWorkflows.length / ITEMS_PER_PAGE);
+  // Filter workflows based on search term
+  const filterWorkflows = useCallback(() => {
+    if (!data?.nexusWorkFlows) return [];
 
+    if (!searchTerm.trim()) {
+      return data.nexusWorkFlows;
+    }
+
+    const term = searchTerm.toLowerCase().trim();
+    return data.nexusWorkFlows.filter(
+      (workflow: WorkFlow) =>
+        workflow.workFlowName.toLowerCase().includes(term) ||
+        workflow.workFlowStatus.toLowerCase().includes(term) ||
+        workflow.client?.clientName.toLowerCase().includes(term)
+      // Add any other fields you want to search by
+    );
+  }, [data, searchTerm]);
+
+  // Update filtered workflows when data or search term changes
   useEffect(() => {
-    setCurrentPage(1); // Reset to page 1 when client filter changes
-  }, [selectedClientFilter]);
+    const filtered = filterWorkflows();
+    setFilteredWorkflows(filtered);
 
-  const handleNextPage = () =>
-    setCurrentPage((prevPage) => Math.min(prevPage + 1, totalPages));
-  const handlePreviousPage = () =>
-    setCurrentPage((prevPage) => Math.max(prevPage - 1, 1));
-  const handleGoToPage = (pageNumber: number) =>
-    setCurrentPage(Math.max(1, Math.min(pageNumber, totalPages)));
+    // Reset to first page when filters change
+    setCurrentPage(1);
 
-  const getPageNumbers = () => {
-    const pageNumbers = [];
-    const maxPagesToShow = 5;
-    let startPage, endPage;
-    if (totalPages <= 0) return [];
-    if (totalPages <= maxPagesToShow) {
-      startPage = 1;
-      endPage = totalPages;
-    } else {
-      const maxPagesBeforeCurrentPage = Math.floor(maxPagesToShow / 2);
-      const maxPagesAfterCurrentPage = Math.ceil(maxPagesToShow / 2) - 1;
-      if (currentPage <= maxPagesBeforeCurrentPage) {
-        startPage = 1;
-        endPage = maxPagesToShow;
-      } else if (currentPage + maxPagesAfterCurrentPage >= totalPages) {
-        startPage = totalPages - maxPagesToShow + 1;
-        endPage = totalPages;
-      } else {
-        startPage = currentPage - maxPagesBeforeCurrentPage;
-        endPage = currentPage + maxPagesAfterCurrentPage;
-      }
-    }
-    for (let i = startPage; i <= endPage; i++) {
-      pageNumbers.push(i);
-    }
-    return pageNumbers;
+    // Calculate total pages
+    setTotalPages(Math.max(1, Math.ceil(filtered.length / pageSize)));
+  }, [data, searchTerm, filterWorkflows, pageSize]);
+
+  // Update paginated workflows when filtered workflows or pagination settings change
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    setPaginatedWorkflows(filteredWorkflows.slice(startIndex, endIndex));
+  }, [filteredWorkflows, currentPage, pageSize]);
+
+  // Event handlers
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
   };
-  const pageNumbersToDisplay = getPageNumbers();
 
-  // --- Render Logic ---
-  let content;
-  if (workFlowsLoading && currentWorkflows.length === 0) {
-    content = <div style={workFlowsStyles.loader}>Loading workflows...</div>;
-  } else if (workFlowsError) {
-    content = (
-      <div style={workFlowsStyles.errorMessage}>
-        Error loading workflows: {workFlowsError.message}
-      </div>
-    );
-  } else if (paginatedWorkFlows.length === 0) {
-    content = (
-      <div style={workFlowsStyles.noDataMessage}>
-        {selectedClientFilter
-          ? `No active workflows found for ${selectedClientFilter.clientName}.`
-          : "No active workflows found. Select a client or clear filter."}
-      </div>
-    );
-  } else {
-    content = (
-      <table style={workFlowsStyles.table}>
-        <thead style={workFlowsStyles.tableHead}>
-          <tr>
-            <th style={workFlowsStyles.tableHeader}>Client Name</th>
-            <th style={workFlowsStyles.tableHeader}>Workflow Name</th>
-            <th style={workFlowsStyles.tableHeader}>Status</th>
-            <th style={workFlowsStyles.tableHeader}>Created</th>
-            <th style={workFlowsStyles.tableHeader}>Actions</th>
-          </tr>
-        </thead>
-        <tbody style={workFlowsStyles.tableBody}>
-          {paginatedWorkFlows.map((workflow) => (
-            <tr key={workflow.iD} style={workFlowsStyles.tableRow}>
-              <td style={workFlowsStyles.tableCell} data-label="Client:">
-                {workflow.client?.clientName || `ID: ${workflow.clientId}`}
-              </td>
-              <td style={workFlowsStyles.tableCell} data-label="Name:">
-                {workflow.workFlowName || "N/A"}
-              </td>
-              <td style={workFlowsStyles.tableCell} data-label="Status:">
-                {workflow.workFlowStatus}
-              </td>
-              <td style={workFlowsStyles.tableCell} data-label="Created:">
-                {workflow.createdAt
-                  ? new Date(workflow.createdAt).toLocaleDateString()
-                  : "N/A"}
-              </td>
-              <td style={workFlowsStyles.tableCell} data-label="Actions:">
-                <button
-                  style={{
-                    ...workFlowsStyles.actionButton,
-                    ...workFlowsStyles.editMetaButton /* Define editMetaButton style */,
-                  }}
-                  aria-label={`Edit details for ${workflow.workFlowName}`}
-                  onClick={() =>
-                    onEditWorkflowMeta(
-                      workflow.iD,
-                      workflow.workFlowName || "",
-                      workflow.workFlowStatus || "",
-                      workflow.clientId || ""
-                    )
-                  }
-                >
-                  Edit
-                </button>{" "}
-                |
-                <button
-                  style={workFlowsStyles.actionButton}
-                  onClick={() =>
-                    onManageWorkflowSteps(
-                      workflow.iD,
-                      workflow.workFlowName || "Unnamed Workflow", // Use workFlowName
-                      workflow.clientId || "" // Ensure clientId is a string
-                    )
-                  }
-                  aria-label={`Manage steps for ${
-                    workflow.workFlowName || "workflow"
-                  }`}
-                >
-                  Manage Steps
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+  const clearSearch = () => {
+    setSearchTerm("");
+  };
+
+  const handleAddSuccess = () => {
+    setMode("list");
+    refetch();
+  };
+
+  const handleEditSuccess = () => {
+    setMode("list");
+    setSelectedWorkflow(null);
+    refetch();
+  };
+
+  const handleManageClick = (workflow: WorkFlow) => {
+    console.log("handleManageClick");
+    console.log(workflow);
+    setSelectedWorkflow(workflow);
+    setMode("view"); // Manage Steps
+  };
+
+  const handleEditClick = (workflow: WorkFlow) => {
+    console.log("handleEditClick");
+    console.log(workflow);
+    setSelectedWorkflow(workflow);
+    setMode("edit"); //Edit Detail
+  };
+
+  const handleCancel = () => {
+    setMode("list");
+    setSelectedWorkflow(null);
+  };
+
+  // Render different views based on mode
+  if (mode === "add") {
+    //  return <AddWorkflow onSuccess={handleAddSuccess} onCancel={handleCancel} />;
+  }
+
+  if (mode === "edit" && selectedWorkflow) {
+    console.log("workFlowViews - WorkflowDetailsEditor - Edit Details");
+    return (
+      <WorkflowDetailsEditor
+        workflow={selectedWorkflow}
+        onSuccess={handleEditSuccess}
+        onCancel={handleCancel}
+      />
     );
   }
 
-  return (
-    <>
-      <div style={workFlowsStyles.tableContainer}>
-        {/* Client Searchable Dropdown */}
-        <div style={workFlowsStyles.clientSearchContainer}>
-          <input
-            type="text"
-            style={workFlowsStyles.searchInput}
-            placeholder="Search & Filter by Client..."
-            value={clientSearchTerm}
-            onChange={handleClientSearchChange}
-            onFocus={() => setIsClientDropdownOpen(true)}
-            onBlur={() => setTimeout(() => setIsClientDropdownOpen(false), 200)} // Delay to allow click on dropdown items
-          />
-          {selectedClientFilter && (
-            <button
-              onClick={clearClientFilter}
-              style={workFlowsStyles.clearFilterButton}
-              aria-label="Clear client filter"
-            >
-              × {/* Clear icon */}
-            </button>
-          )}
-          {isClientDropdownOpen &&
-            (clientSearchResults.length > 0 ||
-              isClientSearchLoading ||
-              (clientSearchTerm.length > 0 &&
-                !isClientSearchLoading &&
-                clientSearchResults.length === 0)) && (
-              <div style={workFlowsStyles.searchResultsDropdown}>
-                {isClientSearchLoading && (
-                  <div style={workFlowsStyles.searchResultItem}>
-                    Searching...
-                  </div>
-                )}
-                {!isClientSearchLoading &&
-                  clientSearchResults.length === 0 &&
-                  clientSearchTerm.length >= MIN_CLIENT_SEARCH_TERM_LENGTH && (
-                    <div style={workFlowsStyles.searchResultItem}>
-                      No clients match "{clientSearchTerm}".
-                    </div>
-                  )}
-                {!isClientSearchLoading &&
-                  clientSearchResults.map((client) => (
-                    <div
-                      key={client.iD}
-                      style={workFlowsStyles.searchResultItem}
-                      onMouseDown={(e) => e.preventDefault()} // Prevents blur before click
-                      onClick={() => handleSelectClientFromDropdown(client)}
-                    >
-                      {client.clientName}
-                    </div>
-                  ))}
-              </div>
-            )}
-          {clientSearchError && (
-            <div style={{ color: "red", fontSize: "0.9em", marginTop: "5px" }}>
-              Client search error: {clientSearchError.message}
-            </div>
-          )}
-        </div>
+  if (mode === "view" && selectedWorkflow) {
+    console.log("workFlowViews - WorkflowStepEditor - Manage Steps");
+    return (
+      <WorkflowStepEditor
+        workflow={selectedWorkflow}
+        onBack={handleCancel}
+        onSave={handleEditSuccess}
+      />
+    );
+  }
 
-        {content}
+  // Main list view
+  return (
+    <div style={styles.container}>
+      <div style={styles.headerContainer}>
+        <h2 style={styles.pageTitle}>Workflows</h2>
+        <button
+          onClick={() => setMode("add")}
+          style={styles.addButton}
+          className="add-button"
+        >
+          + Add Workflow
+        </button>
       </div>
 
-      {/* Pagination Controls */}
-      {!workFlowsError && totalPages > 1 && (
-        <div style={workFlowsStyles.paginationContainer}>
-          <button
-            style={workFlowsStyles.paginationButton}
-            onClick={handlePreviousPage}
-            disabled={currentPage === 1}
+      {/* Search Input - Matching the EntitiesPage implementation */}
+      <div style={styles.searchContainer}>
+        <div style={styles.searchIcon}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            «
-          </button>
-          {pageNumbersToDisplay[0] > 1 && (
-            <>
-              <button
-                style={workFlowsStyles.paginationButton}
-                onClick={() => handleGoToPage(1)}
-              >
-                1
-              </button>
-              {pageNumbersToDisplay[0] > 2 && (
-                <span style={workFlowsStyles.paginationEllipsis}>...</span>
-              )}
-            </>
-          )}
-          {pageNumbersToDisplay.map((num) => (
-            <button
-              key={num}
-              onClick={() => handleGoToPage(num)}
-              style={
-                currentPage === num
-                  ? {
-                      ...workFlowsStyles.paginationButton,
-                      ...workFlowsStyles.paginationButtonActive,
-                    }
-                  : workFlowsStyles.paginationButton
-              }
-              aria-current={currentPage === num ? "page" : undefined}
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </div>
+        <input
+          type="text"
+          placeholder="Search workflows by client, name, or status..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+          style={styles.searchInput}
+          className="search-input"
+          aria-label="Search workflows"
+        />
+        {searchTerm && (
+          <button
+            onClick={clearSearch}
+            style={styles.clearButton}
+            className="clear-button"
+            aria-label="Clear search"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              {num}
-            </button>
-          ))}
-          {pageNumbersToDisplay[pageNumbersToDisplay.length - 1] <
-            totalPages && (
-            <>
-              {pageNumbersToDisplay[pageNumbersToDisplay.length - 1] <
-                totalPages - 1 && (
-                <span style={workFlowsStyles.paginationEllipsis}>...</span>
-              )}
-              <button
-                style={workFlowsStyles.paginationButton}
-                onClick={() => handleGoToPage(totalPages)}
-              >
-                {totalPages}
-              </button>
-            </>
-          )}
-          <button
-            style={workFlowsStyles.paginationButton}
-            onClick={handleNextPage}
-            disabled={currentPage === totalPages}
-          >
-            »
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
           </button>
-          <span style={workFlowsStyles.paginationInfo}>
-            {" "}
-            Page {currentPage} of {totalPages}
-          </span>
+        )}
+      </div>
+
+      {loading && <div style={styles.loadingMessage}>Loading workflows...</div>}
+      {error && (
+        <div style={styles.errorMessage}>
+          Error loading workflows: {error.message}
         </div>
       )}
-    </>
+
+      {!loading && !error && (
+        <>
+          {/* Table or Grid View of Workflows */}
+          {filteredWorkflows.length === 0 ? (
+            <div
+              style={searchTerm ? styles.noResultsMessage : styles.emptyMessage}
+            >
+              {searchTerm
+                ? `No workflows found matching "${searchTerm}"`
+                : "No workflows found. Click 'Add Workflow' to create one."}
+            </div>
+          ) : (
+            <div style={styles.workflowGrid}>
+              {/* If you're using a table format */}
+              <table style={styles.table}>
+                <thead>
+                  <tr style={styles.tableHeader}>
+                    <th style={styles.tableCell}>Name</th>
+                    <th style={styles.tableCell}>Client</th>
+                    <th style={styles.tableCell}>Status</th>
+                    <th style={styles.tableCell}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedWorkflows.map((workflow: WorkFlow) => (
+                    <tr
+                      key={workflow.iD}
+                      style={styles.tableRow}
+                      className="table-row"
+                    >
+                      <td style={styles.tableCell}>{workflow.workFlowName}</td>
+                      <td style={styles.tableCell}>
+                        {workflow.client?.clientName}
+                      </td>
+                      <td style={styles.tableCell}>
+                        <span
+                          style={{
+                            ...styles.statusBadge,
+                            ...(workflow.workFlowStatus === "active"
+                              ? styles.statusActive
+                              : styles.statusInactive),
+                          }}
+                        >
+                          {workflow.workFlowStatus === "active"
+                            ? "Active"
+                            : "Inactive"}
+                        </span>
+                      </td>
+                      <td style={styles.tableCell}>
+                        <div style={styles.actionButtons}>
+                          <button
+                            onClick={() => handleManageClick(workflow)}
+                            style={styles.viewButton}
+                            className="view-button"
+                          >
+                            Manage Steps
+                          </button>
+                          <button
+                            onClick={() => handleEditClick(workflow)}
+                            style={styles.editButton}
+                            className="edit-button"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Pagination Controls - If you're using pagination */}
+              {filteredWorkflows.length > 0 && (
+                <div style={styles.paginationContainer}>
+                  <div style={styles.paginationInfo}>
+                    Showing {(currentPage - 1) * pageSize + 1} to{" "}
+                    {Math.min(currentPage * pageSize, filteredWorkflows.length)}{" "}
+                    of {filteredWorkflows.length} workflows
+                  </div>
+
+                  <div style={styles.paginationControls}>
+                    {/* Previous Page Button */}
+                    <button
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      style={{
+                        ...styles.pageButton,
+                        ...(currentPage === 1 ? styles.pageButtonDisabled : {}),
+                      }}
+                      className="page-button"
+                      aria-label="Previous page"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                      </svg>
+                    </button>
+
+                    {/* Page Numbers */}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((page) => {
+                        // Show first page, last page, current page, and pages around current page
+                        return (
+                          page === 1 ||
+                          page === totalPages ||
+                          Math.abs(page - currentPage) <= 1
+                        );
+                      })
+                      .map((page, index, array) => {
+                        // Add ellipsis if there are gaps
+                        const showEllipsisBefore =
+                          index > 0 && array[index - 1] !== page - 1;
+                        const showEllipsisAfter =
+                          index < array.length - 1 &&
+                          array[index + 1] !== page + 1;
+
+                        return (
+                          <React.Fragment key={page}>
+                            {showEllipsisBefore && (
+                              <span
+                                style={{
+                                  color: "#cbd5e1",
+                                  padding: "0 0.5rem",
+                                }}
+                              >
+                                ...
+                              </span>
+                            )}
+
+                            <button
+                              onClick={() => setCurrentPage(page)}
+                              style={{
+                                ...styles.pageButton,
+                                ...(currentPage === page
+                                  ? styles.pageButtonActive
+                                  : {}),
+                              }}
+                              className={`page-button ${
+                                currentPage === page ? "active" : ""
+                              }`}
+                              aria-label={`Page ${page}`}
+                              aria-current={
+                                currentPage === page ? "page" : undefined
+                              }
+                            >
+                              {page}
+                            </button>
+
+                            {showEllipsisAfter && (
+                              <span
+                                style={{
+                                  color: "#cbd5e1",
+                                  padding: "0 0.5rem",
+                                }}
+                              >
+                                ...
+                              </span>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+
+                    {/* Next Page Button */}
+                    <button
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      style={{
+                        ...styles.pageButton,
+                        ...(currentPage === totalPages
+                          ? styles.pageButtonDisabled
+                          : {}),
+                      }}
+                      className="page-button"
+                      aria-label="Next page"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                      </svg>
+                    </button>
+
+                    {/* Page Size Selector */}
+                    <select
+                      value={pageSize}
+                      onChange={(e) => setPageSize(Number(e.target.value))}
+                      style={styles.pageSizeSelector}
+                      className="page-size-selector"
+                      aria-label="Items per page"
+                    >
+                      <option value={5}>5 per page</option>
+                      <option value={10}>10 per page</option>
+                      <option value={25}>25 per page</option>
+                      <option value={50}>50 per page</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 };
 
-export default WorkFlowsView;
+export default WorkflowView;

@@ -6,7 +6,7 @@ import { ApolloProvider, useQuery, useMutation } from "@apollo/client"; // Added
 // --- Component Imports ---
 import AffiliatesView from "./affiliatesView";
 import ClientsView from "./clientsView";
-import EntitiesView from "./entitiesView";
+import EntitiesView from "./EntitiesView";
 import WorkFlowsView from "./workFlowsView";
 import WorkflowDetailsEditor from "./WorkflowDetailsEditor";
 // import MaintainWorkFlowView from "./maintainWorkFlowView"; // No longer used for steps
@@ -21,7 +21,6 @@ import {
   GET_MANAGE_CLIENTS,
   GET_MANAGE_ENTITIES,
   GET_MANAGE_WORKFLOWS, // This is for the list view
-  UPDATE_WORKFLOW_STEPS, // Placeholder for actual GQL mutation
   UPDATE_WORKFLOW_DETAILS,
   GET_STEP_WORKFLOW_ENTITIES,
 } from "./graphqlQueries";
@@ -239,7 +238,11 @@ const useDashboardLogic = () => {
   const handleNavigateToMaintainWorkflow = useCallback(
     (workflowId: string, workflowName: string, clientId: string) => {
       console.log("handleNavigateToMaintainWorkflow");
-      setEditingWorkflow({ id: workflowId, name: workflowName, clientId });
+      setEditingWorkflow({
+        id: workflowId,
+        name: workflowName,
+        clientId,
+      });
       // currentLevelKey remains 'LoadWorkFlowsView', the content within it changes
     },
     []
@@ -269,63 +272,7 @@ const useDashboardLogic = () => {
     setEditingWorkflow(null);
     // currentLevelKey should remain 'LoadWorkFlowsView' to show the list again
   }, []);
-
-  // Add this hook in the Dashboard component
-  const [updateWorkflowStepsMutation, { loading: isSavingSteps }] = useMutation(
-    UPDATE_WORKFLOW_STEPS
-  );
-
-  // Add this hook in the Dashboard component
-  const [updateWorkfloDetailMutation, { loading: isSavingDetails }] =
-    useMutation(UPDATE_WORKFLOW_DETAILS);
-
-  // Replace the handleSaveWorkflowSteps function
-  const handleSaveWorkflowSteps = useCallback(
-    async (workflowId: string, updatedSteps: WorkFlowStepInput[]) => {
-      console.log(
-        "Dashboard: Attempting to save steps for workflow:",
-        workflowId,
-        updatedSteps
-      );
-
-      try {
-        const { data } = await updateWorkflowStepsMutation({
-          variables: {
-            workflowId,
-            steps: updatedSteps,
-          },
-          refetchQueries: [
-            { query: GET_STEP_WORKFLOW_ENTITIES, variables: { workflowId } },
-          ],
-        });
-
-        console.log("Workflow steps saved successfully:", data);
-
-        if (data?.updateWorkflowSteps?.success) {
-          // Show success notification
-          alert(
-            data.updateWorkflowSteps.message ||
-              "Workflow steps saved successfully!"
-          );
-          handleExitMaintainWorkflow(); // Go back to the list view
-        } else {
-          // Show error notification
-          alert(
-            data?.updateWorkflowSteps?.message || "Error saving workflow steps"
-          );
-        }
-      } catch (err) {
-        console.error("Failed to save workflow steps:", err);
-        alert(
-          `Error saving steps: ${
-            err instanceof Error ? err.message : "Unknown error"
-          }`
-        );
-      }
-    },
-    [updateWorkflowStepsMutation, handleExitMaintainWorkflow]
-  );
-
+  /*  MOVE TO THE WORKFLOWDETAILEDITOR   ************************************************   TODO
   const handleSaveWorkflowDetail = useCallback(
     async (workflowId: string, updatedDetails: workFlowDetailInput[]) => {
       console.log(
@@ -370,7 +317,7 @@ const useDashboardLogic = () => {
     },
     [updateWorkflowStepsMutation, handleExitMaintainWorkflowDetail]
   );
-
+*/
   return {
     currentLevelKey,
     userName,
@@ -386,8 +333,6 @@ const useDashboardLogic = () => {
     handleNavigateToMaintainWorkflow,
     handleExitMaintainWorkflow,
     handleExitMaintainWorkflowDetail,
-    handleSaveWorkflowSteps,
-    handleSaveWorkflowDetail,
   };
 };
 
@@ -424,8 +369,6 @@ const Dashboard: React.FC<{
     handleNavigateToMaintainWorkflow,
     handleExitMaintainWorkflow,
     handleExitMaintainWorkflowDetail,
-    handleSaveWorkflowSteps,
-    handleSaveWorkflowDetail,
   } = useDashboardLogic();
 
   const [isPowerButtonHovered, setIsPowerButtonHovered] = useState(false);
@@ -520,7 +463,6 @@ const Dashboard: React.FC<{
               workflowId={editingWorkflow.id}
               workflowName={editingWorkflow.name}
               clientId={editingWorkflow.clientId}
-              onSave={handleSaveWorkflowSteps}
               onBack={handleExitMaintainWorkflow}
             />
           );
@@ -532,7 +474,6 @@ const Dashboard: React.FC<{
               workflowId={editingWorkflowDetails.id}
               workflowName={editingWorkflowDetails.name}
               clientId={editingWorkflowDetails.clientId}
-              onSave={handleSaveWorkflowDetail}
               onBack={handleExitMaintainWorkflowDetail}
             />
           );

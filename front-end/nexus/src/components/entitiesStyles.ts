@@ -1,170 +1,195 @@
-// In dashboardStyles.ts (add these to your existing styles object)
-// ... existing styles
-const entitiesStyles: { [key: string]: React.CSSProperties } = {
-tableContainer: {
-    width: '100%',
-    overflowX: 'auto', // Important for smaller screens if table is wide
-    margin: '0 0',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)', // Dark theme table bg
-    borderRadius: '8px',
-    padding: '1px',
+// entityPageStyles.ts
+
+export const styles = {
+  // Existing styles...
+  container: {
+    maxWidth: 1200,
+    margin: '2rem auto',
+    padding: '1rem',
   },
+  headerContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '1.5rem',
+  },
+  pageTitle: {
+    color: '#e0e7ef',
+    fontWeight: 700,
+    fontSize: '2rem',
+    letterSpacing: '0.02em',
+  },
+  addButton: {
+    background: 'linear-gradient(90deg, #38bdf8 0%, #6366f1 100%)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '0.75rem',
+    padding: '0.75rem 1.5rem',
+    fontWeight: 700,
+    fontSize: '1rem',
+    cursor: 'pointer',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+    transition: 'all 0.2s ease',
+  },
+  
+  // New search-related styles
+  searchContainer: {
+    display: 'flex',
+    marginBottom: '1.5rem',
+    position: 'relative' as const,
+    maxWidth: '100%',
+  },
+  searchInput: {
+    width: '100%',
+    padding: '0.75rem 1rem 0.75rem 2.75rem',
+    borderRadius: '0.75rem',
+    border: '1px solid #334155',
+    background: 'rgba(51, 65, 85, 0.7)',
+    color: '#f1f5f9',
+    fontSize: '1rem',
+    outline: 'none',
+    transition: 'border 0.2s, box-shadow 0.2s',
+  },
+  searchIcon: {
+    position: 'absolute' as const,
+    left: '1rem',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    color: '#94a3b8',
+    width: '1.25rem',
+    height: '1.25rem',
+  },
+  clearButton: {
+    position: 'absolute' as const,
+    right: '1rem',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'transparent',
+    border: 'none',
+    color: '#94a3b8',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0.25rem',
+    borderRadius: '50%',
+  },
+  
+  // Existing table styles...
   table: {
     width: '100%',
-    borderCollapse: 'collapse',
-    color: '#e0e0e0', // Light text for dark theme
-  },
-  tableHead: {
-    backgroundColor: 'rgba(0, 174, 255, 0.2)', // Using your UI primary accent
+    borderCollapse: 'collapse' as const,
+    borderRadius: '0.75rem',
+    overflow: 'hidden',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
   },
   tableHeader: {
-    padding: '10px 5px',
-    textAlign: 'left',
-    fontWeight: 'bold',
-    borderBottom: '2px solid var(--ui-primary-accent, #00aeff)',
-    // For no-text UI, headers might be visually hidden but present for screen readers
-    // position: 'absolute',
-    // left: '-9999px',
-    // top: 'auto',
-    // width: '1px',
-    // height: '1px',
-    // overflow: 'hidden',
+    backgroundColor: 'rgba(51, 65, 85, 0.8)',
+    color: '#cbd5e1',
+    fontWeight: 600,
+    fontSize: '1rem',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.05em',
   },
   tableRow: {
-    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-    '&:last-child': {
-      borderBottom: 'none', // Remove border for last row 
-    },
-    backgroundColor: 'rgba(7, 7, 7, 0.8)',
-    transition: 'background-color 0.3s ease',
-
+    backgroundColor: 'rgba(30, 41, 59, 0.85)',
+    color: '#e0e7ef',
+    transition: 'background 0.2s',
   },
   tableCell: {
-    padding: '5px 10px',
-    opacity: 1,
-    transition: 'background-color 0.3s ease, opacity 0.3s ease',
-    textAlign: 'left', // Align action buttons to th
+    padding: '0.75rem 1rem',
+    textAlign: 'left' as const,
+    borderBottom: '1px solid rgba(51, 65, 85, 0.5)',
   },
-  loader: {
-    padding: '20px',
-    textAlign: 'center',
-    fontSize: '1.2em',
-    color: '#e0e0e0',
+  statusBadge: {
+    padding: '0.25rem 0.75rem',
+    borderRadius: '1rem',
+    fontSize: '0.9rem',
+    fontWeight: 600,
   },
-  errorMessage: {
-    padding: '20px',
-    textAlign: 'center',
-    color: 'red', // Or your error color
-    backgroundColor: 'rgba(255,0,0,0.1)',
-    border: '1px solid red',
-    borderRadius: '4px',
+  statusActive: {
+    background: 'rgba(16, 185, 129, 0.15)',
+    color: '#10b981',
   },
-  noDataMessage: {
-    padding: '20px',
-    textAlign: 'center',
-    color: '#aaa',
+  statusInactive: {
+    background: 'rgba(239, 68, 68, 0.15)',
+    color: '#ef4444',
   },
-  actionButton: {
-    backgroundColor: 'var(--ui-primary-accent, #00aeff)',
-    color: 'var(--ui-bg-color, #1a1d24)',
-    border: '1.5px solid transparent',
-    padding: '10px 16px',
-    borderRadius: '6px',
+  editButton: {
+    background: 'rgba(51, 65, 85, 0.7)',
+    color: '#cbd5e1',
+    border: '1px solid #64748b',
+    borderRadius: '0.75rem',
+    padding: '0.5rem 1.25rem',
+    fontWeight: 600,
+    fontSize: '1rem',
     cursor: 'pointer',
-    fontWeight: '600',
-    fontSize: '14px',
-    letterSpacing: '0.03em',
-    transition: 'background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease',
-    userSelect: 'none',
-    marginLeft: '5px',
-    // Subtle box-shadow for slight elevation, no glow
-    boxShadow: '0 2px 6px rgba(0, 174, 255, 0.15)',
-    '&:hover': {
-      backgroundColor: 'transparent',
-      borderColor: 'var(--ui-primary-accent, #00aeff)',
-      color: 'var(--ui-primary-accent, #00aeff)',
-      boxShadow: '0 4px 12px rgba(0, 174, 255, 0.25)',
-    },
-    '&:active': {
-      backgroundColor: 'rgba(0, 174, 255, 0.1)',
-      boxShadow: 'none',
-    },
+    transition: 'all 0.2s ease',
   },
-  deleteButton: {
-    backgroundColor: '#c0392b',
-    color: '#fff',
-    border: '1.5px solid transparent',
-    padding: '10px 16px',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontWeight: '600',
-    fontSize: '14px',
-    letterSpacing: '0.03em',
-    transition: 'background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease',
-    userSelect: 'none',
-    boxShadow: '0 2px 6px rgba(192, 57, 43, 0.15)',
-    '&:hover': {
-      backgroundColor: 'transparent',
-      borderColor: '#c0392b',
-      color: '#c0392b',
-      boxShadow: '0 4px 12px rgba(192, 57, 43, 0.25)',
-    },
-    '&:active': {
-      backgroundColor: 'rgba(192, 57, 43, 0.1)',
-      boxShadow: 'none',
-    },
+  emptyMessage: {
+    color: '#cbd5e1',
+    textAlign: 'center' as const,
+    padding: '3rem 0',
+    fontSize: '1.1rem',
   },
-  secondaryButton: {
-    background: "rgba(255, 255, 255, 0.1)",
-    border: "1px solid #ccc",
-    color: "#fff",
-    fontWeight: 500,
-    backdropFilter: "blur(4px)",
+  noResultsMessage: {
+    color: '#cbd5e1',
+    textAlign: 'center' as const,
+    padding: '3rem 0',
+    fontSize: '1.1rem',
+    fontStyle: 'italic',
   },
+  
+  // Pagination styles
   paginationContainer: {
     display: 'flex',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '20px 0',
-    userSelect: 'none', // Prevents text selection on rapid clicks
-  },
-  paginationButton: {
-    background: 'var(--ui-element-bg, #2c303a)', // Use your theme variables
-    color: 'var(--ui-text-color-light, #e0e0e0)',
-    border: '1px solid var(--ui-primary-accent, #00aeff)',
-    padding: '8px 12px',
-    margin: '0 4px',
-    borderRadius: 'var(--ui-border-radius-sm, 4px)',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s, color 0.2s',
-    '&:hover:not(:disabled)': {
-      backgroundColor: 'var(--ui-primary-accent, #00aeff)',
-      color: 'var(--ui-bg-color, #1a1d24)',
-    },
-    '&:disabled': {
-      opacity: 0.5,
-      cursor: 'not-allowed',
-    },
-  },
-  paginationButtonActive: {
-    backgroundColor: 'var(--ui-primary-accent, #00aeff)',
-    color: 'var(--ui-bg-color, #1a1d24)',
-    fontWeight: 'bold',
-    borderColor: 'var(--ui-primary-accent, #00aeff)',
-  },
-  paginationEllipsis: {
-    margin: '0 8px',
-    color: 'var(--ui-text-color-light, #e0e0e0)',
+    marginTop: '1.5rem',
+    padding: '0.5rem 0',
   },
   paginationInfo: {
-    marginLeft: '15px',
-    color: 'var(--ui-text-color-light, #e0e0e0)',
-    fontSize: '0.9em',
+    color: '#cbd5e1',
+    fontSize: '0.95rem',
   },
-  clientsButton: { // Example style for the Clients button
-      // Add specific styles or inherit from actionButton and override
-      // backgroundColor: 'var(--ui-secondary-accent, #7e57c2)', // Example
+  paginationControls: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
   },
-};
+  pageButton: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '2.5rem',
+    height: '2.5rem',
+    borderRadius: '0.5rem',
+    border: '1px solid #334155',
+    background: 'rgba(51, 65, 85, 0.7)',
+    color: '#cbd5e1',
+    fontSize: '0.95rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  },
+  pageButtonActive: {
+    background: 'rgba(56, 189, 248, 0.2)',
+    borderColor: '#38bdf8',
+    color: '#38bdf8',
+  },
+  pageButtonDisabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  },
+  pageSizeSelector: {
+    padding: '0.5rem',
+    borderRadius: '0.5rem',
+    border: '1px solid #334155',
+    background: 'rgba(51, 65, 85, 0.7)',
+    color: '#cbd5e1',
+    fontSize: '0.95rem',
+    cursor: 'pointer',
+    marginLeft: '0.5rem',
+  },
 
-export default entitiesStyles;
+};

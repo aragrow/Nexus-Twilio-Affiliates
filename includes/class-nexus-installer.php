@@ -184,6 +184,22 @@ class Nexus_Installer
       ) $charset_collate;";
         dbDelta($sql_entities);
 
+        // --- Entity Group Relationships Table ---
+        $table_name_entity_group_relationships = $wpdb->prefix . 'nexus_entity_group_relationships';
+        $sql_entity_group_relationships = "CREATE TABLE $table_name_entity_group_relationships (
+        ID BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        g_entity_id BIGINT UNSIGNED NOT NULL,    -- Foreign key to nexus_entity_groups table
+        entity_id BIGINT UNSIGNED NOT NULL,      -- Foreign key to nexus_entities table
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_group_entity (g_entity_id, entity_id), -- Prevent duplicate relationships
+        KEY ge_entity_id (g_entity_id),
+        KEY e_entity_id (entity_id),
+        CONSTRAINT fk_group_relationship FOREIGN KEY (g_entity_id) REFERENCES $table_name_entity_groups(ID) ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_entity_relationship FOREIGN KEY (entity_id) REFERENCES $table_name_entities(ID) ON DELETE CASCADE ON UPDATE CASCADE
+        ) $charset_collate;";
+        dbDelta($sql_entity_group_relationships);
+
 
         // --- Twilio Data Table ---
         $table_name_data = $wpdb->prefix . 'nexus_twilio_data';

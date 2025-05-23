@@ -141,6 +141,16 @@ export const GET_CLIENTS_FOR_SEARCH = gql`
   }
 `;
 
+export const GET_ACTIVE_CLIENTS = gql`
+  query GetActiveClients {
+    activeClients {
+      id
+      name
+      status
+    }
+  }
+`;
+
 export const GET_MANAGE_ENTITIES = gql`
   query GetManageEntities {
     nexusEntities {
@@ -306,6 +316,44 @@ export const UPDATE_WORKFLOW_DETAILS = gql`
       }
       success
       message
+    }
+  }
+`;
+
+export const ADD_ENTITY = gql`
+  mutation AddEntity($input: AddEntityInput!) {
+    addEntity(input: $input) {
+      success
+      message
+      entity {
+        id
+        name
+        type
+        description
+        clientId
+        status
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+export const UPDATE_ENTITY = gql`
+  mutation UpdateEntity($input: UpdateEntityInput!) {
+    updateEntity(input: $input) {
+      success
+      message
+      entity {
+        id
+        name
+        type
+        description
+        clientId
+        status
+        createdAt
+        updatedAt
+      }
     }
   }
 `;
