@@ -60,6 +60,7 @@ const errorLink = onError(
           localStorage.removeItem("authToken");
           localStorage.removeItem("userId");
           localStorage.removeItem("userName");
+          localStorage.removeItem("userRole");
 
           // Force a reload to the root/login page.
           // App component will re-read localStorage on mount and show Login.
@@ -100,6 +101,10 @@ function App() {
   const [userName, setUserName] = useState<string | null>(() =>
     localStorage.getItem("userName")
   );
+  // Add state for role
+  const [userRole, setUserRole] = useState<string | null>(() =>
+    localStorage.getItem("userRole")
+  );
 
   // This effect primarily handles changes that might happen in other tabs/windows
   // or if the errorLink didn't force a full page navigation/reload.
@@ -117,6 +122,7 @@ function App() {
         setAuthToken(currentToken);
         setUserId(localStorage.getItem("userId"));
         setUserName(localStorage.getItem("userName"));
+        setUserRole(localStorage.getItem("userRole"));
       }
     };
 
@@ -133,11 +139,16 @@ function App() {
       const newAuthToken = result?.data?.login?.authToken;
       const newUserId = result?.data?.login?.user?.id;
       const newUserName = result?.data?.login?.user?.name; // Ensure your GraphQL mutation returns this
+      const newUserRole = result?.data?.login?.user?.roles; // Ensure your GraphQL mutation returns this
 
-      if (newAuthToken && newUserId && newUserName) {
+      {
+        console.log("Login result:", result);
+      }
+      if (newAuthToken && newUserId && newUserName && newUserRole) {
         localStorage.setItem("authToken", newAuthToken);
         localStorage.setItem("userId", newUserId);
         localStorage.setItem("userName", newUserName);
+        localStorage.setItem("userRole", newUserRole);
         setAuthToken(newAuthToken);
         setUserId(newUserId);
         setUserName(newUserName);
@@ -165,9 +176,12 @@ function App() {
     localStorage.removeItem("authToken");
     localStorage.removeItem("userId");
     localStorage.removeItem("userName");
+    localStorage.removeItem("userRole");
+
     setAuthToken(null);
     setUserId(null);
     setUserName(null);
+    setUserRole(null);
 
     // Clear Apollo Client cache to remove any protected data
     client
@@ -199,6 +213,7 @@ function App() {
           <Dashboard
             userId={userId}
             userName={userName}
+            userRole={userRole}
             onLogout={() => handleLogout(true)} // Pass logout handler to dashboard
           />
         ) : (

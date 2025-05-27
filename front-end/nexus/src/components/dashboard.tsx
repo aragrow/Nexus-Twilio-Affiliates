@@ -7,6 +7,7 @@ import { ApolloProvider, useQuery, useMutation } from "@apollo/client"; // Added
 import AffiliatesView from "./affiliatesView";
 import ClientsView from "./clientsView";
 import EntitiesView from "./EntitiesView";
+import EntityAdd from "./EntityAdd";
 import WorkFlowsView from "./workFlowsView";
 import WorkflowDetailsEditor from "./WorkflowDetailsEditor";
 // import MaintainWorkFlowView from "./maintainWorkFlowView"; // No longer used for steps
@@ -65,6 +66,7 @@ const WorkFlowIcon = HolderWorkFlowIcon;
 const useDashboardLogic = () => {
   const [currentLevelKey, setCurrentLevelKey] = useState<string>("root");
   const [userName, setUserName] = useState<string>("");
+  const [userRole, setUserRole] = useState<string>("");
   const [selectedIdForEdit, setSelectedIdForEdit] = useState<string | null>(
     null
   );
@@ -84,12 +86,15 @@ const useDashboardLogic = () => {
   useEffect(() => {
     const storedUserName = localStorage.getItem("userName") || "User";
     setUserName(storedUserName);
+    const storedUserRole = localStorage.getItem("userRole") || "Role";
+    setUserRole(storedUserRole);
   }, []);
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("userName");
     localStorage.removeItem("userId");
+    localStorage.removeItem("userRole");
     client.resetStore().finally(() => window.location.reload());
   }, []);
 
@@ -169,7 +174,12 @@ const useDashboardLogic = () => {
         id: "addEntity",
         IconComponent: AddIcon,
         ariaLabel: "Add New Entity",
-        action: () => console.log("Trigger Add Entity UI"),
+        action: () => {
+          console.log("Triggering Add Entity UI");
+          setCurrentLevelKey("addEntityView");
+          // This will trigger the EntitiesView component with mode="add"
+          // We need to modify EntitiesView to accept an initialMode prop
+        },
       },
       {
         id: "manageEntity",
@@ -321,6 +331,7 @@ const useDashboardLogic = () => {
   return {
     currentLevelKey,
     userName,
+    userRole,
     iconMap,
     handleCardClick,
     handleBack,
@@ -342,8 +353,14 @@ const useDashboardLogic = () => {
 const Dashboard: React.FC<{
   userId: string | null; // Added props based on App.tsx usage
   userName: string | null;
+  userRole: string | null;
   onLogout: () => void; // Added props based on App.tsx usage
-}> = ({ userId, userName: initialUserName, onLogout }) => {
+}> = ({
+  userId,
+  userName: initialUserName,
+  userRole: initialUserRole,
+  onLogout,
+}) => {
   // Added props
   const { loading: authLoading, error: authError } = useQuery(
     GET_CURRENT_USER_STATUS,
@@ -357,6 +374,7 @@ const Dashboard: React.FC<{
   const {
     currentLevelKey,
     userName, // This comes from localStorage in the hook
+    userRole,
     iconMap,
     handleCardClick,
     handleBack,
@@ -444,6 +462,15 @@ const Dashboard: React.FC<{
             onEntities={(id) => console.log("List of entities for client:", id)}
           />
         );
+      case "addEntityView":
+        return (
+          <EntityAdd
+            isLoading={entitiesLoading}
+            isError={entitiesError?.message}
+            onEdit={(id) => console.log("Edit entity action:", id)}
+            onBilling={(id: string) => console.log("Billing for entity:", id)}
+          />
+        );
       case "manageEntitiesView":
         return (
           <EntitiesView
@@ -497,37 +524,52 @@ const Dashboard: React.FC<{
             </div>
           );
         }
-        return navItems.map((item: NavItem) => (
-          <div
-            key={item.id}
-            style={styles.dashboardCard}
-            role="button"
-            tabIndex={0}
-            aria-label={item.ariaLabel}
-            onClick={() => handleCardClick(item)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") handleCardClick(item);
-            }}
-            // Simplified hover/active handling, consider CSS classes
-            onMouseDown={(e) =>
-              (e.currentTarget.style.transform = "scale(0.98)")
-            }
-            onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-            onMouseEnter={(e) =>
-              Object.assign(e.currentTarget.style, styles.dashboardCardHover)
-            }
-            onMouseLeave={(e) =>
-              Object.assign(
-                e.currentTarget.style,
-                styles.dashboardCard as React.CSSProperties
-              )
-            }
-          >
-            <item.IconComponent
-              style={styles.cardIcon as React.CSSProperties}
-            />
-          </div>
-        ));
+
+        return navItems.map((item: NavItem) => {
+          if (
+            userRole.toLowerCase().includes("affiliate") &&
+            item.ariaLabel.toLowerCase().includes("affiliate")
+          ) {
+            return null;
+          } else if (
+            userRole.toLowerCase().includes("client") &&
+            (item.ariaLabel.toLowerCase().includes("affiliate") ||
+              item.ariaLabel.toLowerCase().includes("client"))
+          ) {
+            return null;
+          }
+
+          return (
+            <div
+              key={item.id}
+              style={styles.dashboardCard}
+              role="button"
+              tabIndex={0}
+              aria-label={item.ariaLabel}
+              onClick={() => handleCardClick(item)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") handleCardClick(item);
+              }}
+              onMouseDown={(e) =>
+                (e.currentTarget.style.transform = "scale(0.98)")
+              }
+              onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+              onMouseEnter={(e) =>
+                Object.assign(e.currentTarget.style, styles.dashboardCardHover)
+              }
+              onMouseLeave={(e) =>
+                Object.assign(
+                  e.currentTarget.style,
+                  styles.dashboardCard as React.CSSProperties
+                )
+              }
+            >
+              <item.IconComponent
+                style={styles.cardIcon as React.CSSProperties}
+              />
+            </div>
+          );
+        });
     }
   };
 
@@ -567,7 +609,8 @@ const Dashboard: React.FC<{
             {headerTitleText}
           </h1>
           <span style={styles.welcomeMessage} aria-live="polite">
-            Welcome, {userName || initialUserName}!
+            Welcome, {userName || initialUserName}! ({" "}
+            {userRole || initialUserRole} )
           </span>{" "}
           {/* Use initialUserName from props as fallback */}
           <div

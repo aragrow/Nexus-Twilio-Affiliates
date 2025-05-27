@@ -16,7 +16,7 @@ const WorkflowDetailsEditor: React.FC<EditWorkflowDetailsProps> = ({
 }) => {
   const [form, setForm] = useState<UpdateWorkflowDetailsInput>({
     name: workflow.workFlowName || "",
-    status: "active", // Default to active
+    status: workflow.workFlowStatus || "active", // Default to active
     id: workflow.iD,
     workflow: workflow,
   });
@@ -84,9 +84,9 @@ const WorkflowDetailsEditor: React.FC<EditWorkflowDetailsProps> = ({
           <span style={styles.checkboxText}>Active</span>
           <span
             style={styles.statusIndicator}
-            className={form.status === "active" ? "active" : "inactive"}
+            className={form.status === "Active" ? "active" : "inactive"}
           >
-            {form.status === "active" ? "Active" : "Inactive"}
+            {form.status === "Active" ? "Active" : "Inactive"}
           </span>
         </label>
       </div>

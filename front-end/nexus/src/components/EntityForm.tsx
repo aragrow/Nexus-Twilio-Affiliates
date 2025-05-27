@@ -137,8 +137,8 @@ const EntityForm: React.FC<EntityFormProps> = ({
         >
           <option value="">Select a client</option>
           {clients.map((client) => (
-            <option key={client.id} value={client.id}>
-              {client.name}
+            <option key={client.iD} value={client.iD}>
+              {client.clientName}
             </option>
           ))}
         </select>

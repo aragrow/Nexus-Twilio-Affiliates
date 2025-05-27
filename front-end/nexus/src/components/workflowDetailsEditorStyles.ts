@@ -6,7 +6,7 @@ export const styles = {
     margin: "2rem auto",
     padding: "2rem",
     borderRadius: "1.5rem",
-    background: "rgba(30, 41, 59, 0.85)", // glassy dark blue
+    background: "rgba(1, 1, 2, 0.85)", // glassy dark blue
     boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.37)",
     backdropFilter: "blur(8px)",
     border: "1px solid rgba(255, 255, 255, 0.18)",

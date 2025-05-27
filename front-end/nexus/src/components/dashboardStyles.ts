@@ -126,9 +126,9 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   dashboardCardHover: {
     transform: 'translateY(-6px) scale(1.05)',
-    boxShadow: '0 12px 30px rgba(0, 0, 0, 0.2)',
+    boxShadow: '0 12px 30px rgba(241, 243, 245, 0.2)',
     borderColor: '#3498db',
-    color: '#000000',
+    color: '#ffffff',
     background: 'linear-gradient(135deg, rgba(236, 240, 241, 0.1), rgba(208, 211, 212, 0.1))',
   },
   dashboardCardActive: {

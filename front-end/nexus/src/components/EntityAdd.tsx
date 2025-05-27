@@ -15,6 +15,7 @@ const EntityAdd: React.FC<AddEntityProps> = ({ onSuccess, onCancel }) => {
     error: clientsError,
   } = useQuery(GET_ACTIVE_CLIENTS);
 
+  console.log(clientsData);
   const [addEntity, { loading: submitting }] = useMutation(ADD_ENTITY, {
     onError: (error) => {
       setError(error.message);
@@ -72,7 +73,7 @@ const EntityAdd: React.FC<AddEntityProps> = ({ onSuccess, onCancel }) => {
     clientId: 0,
     status: "active",
   };
-
+  console.log(clientsData);
   return (
     <div style={styles.container}>
       <h3 style={styles.header}>Add New Entity</h3>
@@ -81,7 +82,7 @@ const EntityAdd: React.FC<AddEntityProps> = ({ onSuccess, onCancel }) => {
 
       <EntityForm
         initialValues={initialValues}
-        clients={clientsData?.activeClients || []}
+        clients={clientsData?.nexusClients || []}
         onSubmit={handleSubmit}
         isSubmitting={submitting}
         submitButtonText="Create Entity"

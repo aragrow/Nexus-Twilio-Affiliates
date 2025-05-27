@@ -103,6 +103,16 @@
 // queries.js
 import { gql } from "@apollo/client";
 
+export const GET_CURRENTUSER = gql`
+  query GetCurrentUser {
+    viewer {
+      id
+      name
+      roles
+    }
+  }
+`;
+
 export const GET_MANAGE_AFFILIATES = gql`
   query GetManageAffiliates {
     nexusAffiliates {
@@ -143,9 +153,14 @@ export const GET_CLIENTS_FOR_SEARCH = gql`
 
 export const GET_ACTIVE_CLIENTS = gql`
   query GetActiveClients {
-    activeClients {
-      id
-      name
+    nexusClients(status: "active") {
+      iD
+      affiliate {
+        companyName
+      }
+      clientName
+      clientPhone
+      clientEmail
       status
     }
   }

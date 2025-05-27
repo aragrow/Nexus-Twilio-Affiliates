@@ -233,12 +233,12 @@ const EntitiesView: React.FC = () => {
                       <span
                         style={{
                           ...styles.statusBadge,
-                          ...(entity.entityStatus === "active"
+                          ...(entity.entityStatus === "Active"
                             ? styles.statusActive
                             : styles.statusInactive),
                         }}
                       >
-                        {entity.entityStatus === "active"
+                        {entity.entityStatus === "Active"
                           ? "Active"
                           : "Inactive"}
                       </span>
