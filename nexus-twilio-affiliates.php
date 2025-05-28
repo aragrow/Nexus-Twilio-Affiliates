@@ -250,7 +250,7 @@ add_filter('graphql_jwt_auth_whitelist_fields', function ($fields) {
 	return $fields;
 }, 10, 1);
 
-
+/*
 add_filter('graphql_user_fields', function ($fields) {
 	$fields['roles'] = [
 		'type' => ['list_of' => 'String'],
@@ -261,3 +261,4 @@ add_filter('graphql_user_fields', function ($fields) {
 	];
 	return $fields;
 });
+*/

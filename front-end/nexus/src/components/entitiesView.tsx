@@ -1,5 +1,5 @@
 // EntitiesView.tsx
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useQuery } from "@apollo/client";
 import { GET_MANAGE_ENTITIES } from "./graphqlQueries";
 import EntityAdd from "./EntityAdd";
@@ -19,7 +19,26 @@ const EntitiesView: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [paginatedEntities, setPaginatedEntities] = useState<Entity[]>([]);
 
-  const { data, loading, error, refetch } = useQuery(GET_MANAGE_ENTITIES);
+  const userId = localStorage.getItem("userId");
+  const userRole = localStorage.getItem("userRole");
+  const isAffiliate = userRole?.toLowerCase() === "nexus_affiliate";
+  const isClient = userRole?.toLowerCase() === "nexus_client";
+
+  //If there's any chance userId could be undefined or malformed (e.g., before login),  guards the decoding
+  const dbUserId = useMemo(() => {
+    try {
+      return atob(userId).split(":")[1];
+    } catch (e) {
+      return null;
+    }
+  }, [userId]);
+
+  const { data, loading, error, refetch } = useQuery(GET_MANAGE_ENTITIES, {
+    variables: {
+      affiliateId: isAffiliate ? dbUserId : null,
+      clientId: isClient ? dbUserId : null,
+    },
+  });
 
   // Filter entities based on search term
   const filterEntities = useCallback(() => {

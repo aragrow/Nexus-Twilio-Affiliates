@@ -1,6 +1,6 @@
 // src/components/dashboard.tsx
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { ApolloProvider, useQuery, useMutation } from "@apollo/client"; // Added useMutation for mutations
 
 // --- Component Imports ---
@@ -21,9 +21,7 @@ import {
   GET_MANAGE_AFFILIATES,
   GET_MANAGE_CLIENTS,
   GET_MANAGE_ENTITIES,
-  GET_MANAGE_WORKFLOWS, // This is for the list view
-  UPDATE_WORKFLOW_DETAILS,
-  GET_STEP_WORKFLOW_ENTITIES,
+  GET_MANAGE_WORKFLOWS,
 } from "./graphqlQueries";
 
 // --- Type Imports ---
@@ -394,6 +392,9 @@ const Dashboard: React.FC<{
 
   // Data fetching for list views (Affiliates, Clients, Entities)
   // WorkFlowsView now fetches its own data.
+  const isAffiliate = userRole?.toLowerCase() === "nexus_affiliate";
+  const isClient = userRole?.toLowerCase() === "nexus_client";
+
   const {
     data: affiliatesData,
     loading: affiliatesLoading,
@@ -401,19 +402,49 @@ const Dashboard: React.FC<{
   } = useQuery(GET_MANAGE_AFFILIATES, {
     skip: currentLevelKey !== "manageAffiliatesView",
   });
+
+  //If there's any chance userId could be undefined or malformed (e.g., before login),  guards the decoding
+  const dbUserId = useMemo(() => {
+    try {
+      return atob(userId).split(":")[1];
+    } catch (e) {
+      return null;
+    }
+  }, [userId]);
+
   const {
     data: clientsData,
     loading: clientsLoading,
     error: clientsError,
   } = useQuery(GET_MANAGE_CLIENTS, {
     skip: currentLevelKey !== "manageClientsView",
+    variables: {
+      affiliateId: isAffiliate ? dbUserId : null,
+    },
   });
+
   const {
     data: entitiesData,
     loading: entitiesLoading,
     error: entitiesError,
   } = useQuery(GET_MANAGE_ENTITIES, {
     skip: currentLevelKey !== "manageEntitiesView",
+    variables: {
+      affiliateId: isAffiliate ? dbUserId : null,
+      clientId: isClient ? dbUserId : null,
+    },
+  });
+
+  const {
+    data: workflowsData,
+    loading: workflowsLoading,
+    error: workflowsError,
+  } = useQuery(GET_MANAGE_WORKFLOWS, {
+    skip: currentLevelKey !== "LoadWorkFlowsView",
+    variables: {
+      affiliateId: isAffiliate ? dbUserId : null,
+      clientId: isClient ? dbUserId : null,
+    },
   });
   // Removed workFlowsData query from here as WorkFlowsView handles its own data.
 
@@ -510,6 +541,9 @@ const Dashboard: React.FC<{
           <WorkFlowsView
             // WorkFlowsView now fetches its own data and doesn't need workFlows, isLoading, isError props from here.
             // It only needs handlers for actions.
+            workflows={workflowsData?.nexusWorkFlows || []}
+            isLoading={workflowsLoading}
+            isError={workflowsError?.message}
             onEditWorkflowMeta={handleEditWorkflowDetails} // For editing
             onManageWorkflowSteps={handleNavigateToMaintainWorkflow} // For navigating to step editor
           />

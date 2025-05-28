@@ -124,8 +124,8 @@ export const GET_MANAGE_AFFILIATES = gql`
 `;
 
 export const GET_MANAGE_CLIENTS = gql`
-  query GetManageClients {
-    nexusClients {
+  query GetManageClients($affiliateId: ID) {
+    nexusClients(affiliateId: $affiliateId) {
       affiliate {
         companyName
       }
@@ -138,6 +138,7 @@ export const GET_MANAGE_CLIENTS = gql`
     }
   }
 `;
+
 export const GET_CLIENTS_FOR_SEARCH = gql`
   query GetClientsForSearch($term: String) {
     nexusClients(status: "active", term: $term) {
@@ -167,8 +168,8 @@ export const GET_ACTIVE_CLIENTS = gql`
 `;
 
 export const GET_MANAGE_ENTITIES = gql`
-  query GetManageEntities {
-    nexusEntities {
+  query GetManageEntities($affiliateId: ID, $clientId: ID) {
+    nexusEntities(affiliateId: $affiliateId, clientId: $clientId) {
       entityType
       iD
       ratePerMinute
@@ -185,8 +186,8 @@ export const GET_MANAGE_ENTITIES = gql`
 `;
 
 export const GET_MANAGE_WORKFLOWS = gql`
-  query GetManageWorkFlows {
-    nexusWorkFlows {
+  query GetManageWorkFlows($affiliateId: ID, $clientId: ID) {
+    nexusWorkFlows(affiliateId: $affiliateId, clientId: $clientId) {
       iD
       clientId
       workFlowName

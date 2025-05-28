@@ -33,18 +33,12 @@ class Nexus_Data_Seeder
         if (!empty($role_slug)) {
             $serialized_caps = serialize([$role_slug => true]);
 
-            $sql .= $wpdb->prepare(
+            $sql .= $wpdb->query($wpdb->prepare(
                 "INSERT INTO `$table_usermeta` (`user_id`, `meta_key`, `meta_value`) VALUES (%d, %s, %s);\n",
                 $user_id_sql,
                 $wpdb->prefix . 'capabilities',
                 $serialized_caps
-            );
-            $sql .= $wpdb->prepare(
-                "INSERT INTO `$table_usermeta` (`user_id`, `meta_key`, `meta_value`) VALUES (%d, %s, %d);\n",
-                $user_id_sql,
-                $wpdb->prefix . 'user_level',
-                $level
-            );
+            ));
         }
 
         error_log(".");
@@ -53,6 +47,8 @@ class Nexus_Data_Seeder
 
     public static function generate_sql($num_affiliates = 50, $num_clients_per_affiliate = 10)
     {
+        error_log('EXEC: generate_sql');
+
         global $wpdb;
 
         if (!class_exists('Faker\Factory')) {
@@ -70,19 +66,24 @@ class Nexus_Data_Seeder
         $sql_output = "-- Dummy Data for Affiliates and Clients\nSTART TRANSACTION;\n\n";
 
         $affiliate_user_ids = [];
-
+        error_log('Deleting Seed Data');
         $wpdb->query("START TRANSACTION");
         $wpdb->query("DELETE FROM $table_data  WHERE 1=1");
         $wpdb->query("DELETE FROM $table_entities WHERE 1=1");
         $wpdb->query("DELETE FROM $table_clients  WHERE 1=1");
         $wpdb->query("DELETE FROM $table_affiliates WHERE 1=1");
-        $args_for_get_users = ['role' => ['Affiliate', 'Client', 'Entity']];
+        $args_for_get_users = ['role__in' => ['nexus_affiliate', 'nexus_client', 'nexus_entity'], 'fields' => ['ID']];
         $users_with_role = get_users($args_for_get_users);
         foreach ($users_with_role as $user_object) {
             $user_id    = $user_object->ID;
-            wp_delete_user($user_id);
-        }
+            // Delete the user
+            $deleted = wp_delete_user($user_id);
 
+            // Optionally confirm user meta is gone
+            if ($deleted) {
+                $wpdb->delete($wpdb->usermeta, ['user_id' => $user_id]);
+            }
+        }
 
         error_log("-- WordPress Users for Affiliates --\n");
         for ($i = 1; $i <= $num_affiliates; $i++) {
@@ -152,7 +153,7 @@ class Nexus_Data_Seeder
             for ($i = 1; $i <= rand(1, 10); $i++) {
                 if ($entity_login) {
                     $username = $faker->unique()->userName() . $cli_i;
-                    [$client_user_sql, $entity_user_id_sql] = self::generate_wp_user_sql($username, $client_email, $client_name, 'nexus_client', 'Client', 0);
+                    [$client_user_sql, $entity_user_id_sql] = self::generate_wp_user_sql($username, $client_email, $client_name, 'nexus_entity', 'Entity', 0);
                     $sql_output .= $entity_user_id_sql . "\n";
                 } else
                     $entity_user_id_sql = null;
@@ -277,8 +278,8 @@ class Nexus_Data_Seeder
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['seed']) && $_GET['seed'] === 'uyr699^4hf')
-    add_action('init', 'nexus_twilio_seeder');
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['seed']) && $_GET['seed'] === 'uyr699_4hf')
+    add_action('admin_init', 'nexus_twilio_seeder');
 
 function nexus_twilio_seeder()
 {
@@ -286,8 +287,8 @@ function nexus_twilio_seeder()
 
         header('Content-Type: text/plain');
 
-        $num_affiliates = isset($_POST['num_affiliates']) ? (int)$_POST['num_affiliates'] : 50;
-        $num_clients_per_affiliate = isset($_POST['num_clients_per_affiliate']) ? (int)$_POST['num_clients_per_affiliate'] : 10;
+        $num_affiliates = isset($_POST['num_affiliates']) ? (int)$_POST['num_affiliates'] : 10;
+        $num_clients_per_affiliate = isset($_POST['num_clients_per_affiliate']) ? (int)$_POST['num_clients_per_affiliate'] : 5;
 
         Nexus_Data_Seeder::generate_sql($num_affiliates, $num_clients_per_affiliate);
         exit;

@@ -19,7 +19,13 @@ export async function loginToWordPress(username: string, password: string) {
               user {
                 id
                 name
-                roles
+                roles {
+                  edges {
+                    node {
+                      name
+                    }
+                  }
+                }
               }
             }
           }

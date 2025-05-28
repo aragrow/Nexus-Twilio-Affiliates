@@ -52,7 +52,7 @@ class NexusGraphQLTypeRegistrar
                     }
                 ],
                 'affiliateId' => [
-                    'type'        => 'Int', // This is the nexus_clients.affiliate_id column
+                    'type'        => 'ID', // This is the nexus_clients.affiliate_id column
                     'description' => __('The database ID of the affiliate this client belongs to', 'nexus-twilio-affiliates'),
                     'resolve'     => function ($client_row) {
                         return !empty($client_row->affiliate_id) ? (int) $client_row->affiliate_id : null;
@@ -548,7 +548,7 @@ class NexusGraphQLTypeRegistrar
                 'first' => ['type' => 'Int', 'defaultValue' => 100],
                 'offset' => ['type' => 'Int', 'defaultValue' => 0],
                 'status' => ['type' => 'String'],
-                'affiliateId' => ['type' => 'Int'], // Filter by parent affiliate ID
+                'affiliateId' => ['type' => 'ID'], // Filter by parent affiliate ID
                 'term' => ['type' => 'string'],
             ],
             'resolve'     => function ($root, $args, $context, $info) use ($table_name_clients, $wpdb) {
@@ -589,7 +589,9 @@ class NexusGraphQLTypeRegistrar
         register_graphql_field('RootQuery', 'nexusEntity', [
             'type' => 'NexusEntity',
             'description' => __('Retrieve a single Nexus Entity by ID', 'nexus-twilio-affiliates'),
-            'args' => ['iD' => ['type' => ['non_null' => 'ID']]],
+            'args' => [
+                'iD' => ['type' => ['non_null' => 'ID']]
+            ],
             'resolve' => function ($root, $args, $context, $info) use ($table_name_entities, $wpdb) {
                 $entity_id = isset($args['iD']) ? absint($args['iD']) : 0;
                 if (empty($entity_id)) return null;
@@ -605,13 +607,16 @@ class NexusGraphQLTypeRegistrar
                 'first' => ['type' => 'Int', 'defaultValue' => 100],
                 'offset' => ['type' => 'Int', 'defaultValue' => 0],
                 'clientId' => ['type' => 'ID', 'description' => 'Filter by client ID'],
+                'affiliateId' => ['type' => 'ID', 'description' => 'Filter by affiliate ID'],
                 'entityType' => ['type' => 'String'],
                 'entityStatus' => ['type' => 'String'],
                 'entityPhone' => ['type' => 'String'],
             ],
-            'resolve' => function ($root, $args, $context, $info) use ($table_name_entities, $wpdb) {
+            'resolve' => function ($root, $args, $context, $info) use ($table_name_entities, $table_name_clients, $wpdb) {
 
                 error_log('RootQuery -> nexusEntities - Executed.');
+                error_log(print_r($args, true));
+
                 $sql = "SELECT * FROM $table_name_entities";
                 $where_clauses = [];
                 $params = [];
@@ -633,6 +638,11 @@ class NexusGraphQLTypeRegistrar
                     $params[] = $args['entityPhone'];
                 }
 
+                if (!empty($args['affiliateId'])) {
+                    $where_clauses[] = "client_id in (SELECT ID FROM $table_name_clients WHERE affiliate_id = %d)";
+                    $params[] = $args['affiliateId'];
+                }
+
                 if (count($where_clauses) > 0) {
                     $sql .= " WHERE " . implode(" AND ", $where_clauses);
                 }
@@ -640,8 +650,16 @@ class NexusGraphQLTypeRegistrar
                 $params[] = absint($args['first']);
                 $params[] = absint($args['offset']);
 
+                $prepared_sql = $wpdb->prepare($sql, ...$params);
+                $results = $wpdb->get_results($prepared_sql) ?: [];
 
-                return $wpdb->get_results($wpdb->prepare($sql, ...$params)) ?: [];
+                if ($wpdb->last_error) {
+                    error_log("GraphQL nexusWorkflows Error: " . $wpdb->last_error . " | SQL: " . $prepared_sql);
+                    // Optionally throw new \GraphQL\Error\UserError('Failed to fetch workflows.');
+                    return []; // Return empty on DB error
+                }
+                error_log($wpdb->last_query);
+                return $results;
             }
         ]);
 
@@ -704,6 +722,7 @@ class NexusGraphQLTypeRegistrar
             'description' => __('Retrieve a single Nexus Workflow by ID', 'nexus-twilio-affiliates'),
             'args'        => [
                 'iD' => ['type' => ['non_null' => 'ID']],
+
             ],
             'resolve'     => function ($root, $args) use ($table_name_workflows, $wpdb) {
                 $workflow_id = absint($args['iD']);
@@ -719,6 +738,7 @@ class NexusGraphQLTypeRegistrar
                 'first' => ['type' => 'Int', 'defaultValue' => 100],
                 'offset' => ['type' => 'Int', 'defaultValue' => 0],
                 'clientId' => ['type' => 'ID'],
+                'affiliateId' => ['type' => 'ID'], // Add this parameter
                 'workFlowName' => ['type' => 'String'],
                 'workFlowStatus' => ['type' => 'String']
             ],
@@ -740,6 +760,12 @@ class NexusGraphQLTypeRegistrar
                 if (!empty($args['workFlowStatus'])) {
                     $where_clauses[] = "a.workflow_status = %s";
                     $params[] = sanitize_text_field($args['workFlowStatus']);
+                }
+
+                // Add this condition to filter by affiliate ID
+                if (!empty($args['affiliateId'])) {
+                    $where_clauses[] = "a.client_id IN (SELECT ID FROM $table_name_clients WHERE affiliate_id = %d)";
+                    $params[] = absint($args['affiliateId']);
                 }
 
                 if (count($where_clauses) > 0) {
@@ -798,7 +824,7 @@ class NexusGraphQLTypeRegistrar
                 $prepared_sql = $wpdb->prepare($sql, $workflow_id);
                 $results = $wpdb->get_results($prepared_sql) ?: [];
 
-                // error_log($wpdb->last_query);
+                error_log($wpdb->last_query);
                 // error_log(print_r($wpdb->last_result, true));
                 if ($wpdb->last_error) {
                     error_log("GraphQL nexusWorkflowEntitiesByWorkflowId Error: " . $wpdb->last_error . " | SQL: " . $prepared_sql);
@@ -821,6 +847,8 @@ class NexusGraphQLTypeRegistrar
                 'workflowId' => ['type' => 'ID'], // ID from nexus_workflow_entities table
             ],
             'resolve'     => function ($root, $args) use ($table_name_workflow_entities, $wpdb) {
+
+                error_log('RootQuery -> nexusWorkFlowStep - Executed.');
 
                 $sql = "SELECT * FROM $table_name_workflow_entities";
                 $where_clauses = [];

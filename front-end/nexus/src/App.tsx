@@ -139,8 +139,10 @@ function App() {
       const newAuthToken = result?.data?.login?.authToken;
       const newUserId = result?.data?.login?.user?.id;
       const newUserName = result?.data?.login?.user?.name; // Ensure your GraphQL mutation returns this
-      const newUserRole = result?.data?.login?.user?.roles; // Ensure your GraphQL mutation returns this
+      const newUserRole =
+        result?.data?.login?.user?.roles?.edges[0]?.node?.name; // Ensure your GraphQL mutation returns this
 
+      console.log(newUserRole);
       {
         console.log("Login result:", result);
       }
