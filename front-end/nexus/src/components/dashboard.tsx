@@ -13,6 +13,7 @@ import WorkflowDetailsEditor from "./WorkflowDetailsEditor";
 // import MaintainWorkFlowView from "./maintainWorkFlowView"; // No longer used for steps
 import WorkFlowStepEditor from "./WorkFlowStepEditor"; // <--- IMPORT NEW COMPONENT
 import AffiliateEditForm from "./affiliateEditForm";
+import HamburgerMenu from "./HamburgerMenuProps";
 
 // --- GraphQL & API Imports ---
 import client from "./apolloClient";
@@ -45,6 +46,7 @@ import {
   HolderManageIcon,
   HolderWorkFlowIcon,
   HolderBillingIcon,
+  HolderHamburgerIcon,
 } from "./icons";
 import styles from "./dashboardStyles";
 
@@ -59,6 +61,10 @@ const AddIcon = HolderAddIcon;
 const ManageIcon = HolderManageIcon;
 const WorkFlowIcon = HolderWorkFlowIcon;
 const BillingIcon = HolderBillingIcon;
+const HamburgerIcon = HolderHamburgerIcon;
+
+// Add to Dashboard component state
+const [isMenuOpen, setIsMenuOpen] = useState(false);
 
 // ========================================================================
 // Custom Hook for Dashboard Navigation & Core Logic
@@ -655,6 +661,19 @@ const Dashboard: React.FC<{
             Welcome, {userName || initialUserName}! ({" "}
             {userRole || initialUserRole} )
           </span>{" "}
+          <button
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "8px",
+              marginRight: "10px",
+            }}
+            onClick={() => setIsMenuOpen(true)}
+            aria-label="Open Menu"
+          >
+            <HamburgerIcon style={styles.headerIcon as React.CSSProperties} />
+          </button>
           {/* Use initialUserName from props as fallback */}
           <div
             title="Logout"
@@ -681,7 +700,13 @@ const Dashboard: React.FC<{
             <PowerIcon style={styles.headerIcon as React.CSSProperties} />
           </div>
         </div>
-
+        <HamburgerMenu
+          isOpen={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          navItems={iconMap[currentLevelKey] || iconMap.root}
+          userRole={userRole}
+          handleCardClick={handleCardClick}
+        />
         <ApolloProvider client={client}>
           {" "}
           {/* Ensure client is available to children */}

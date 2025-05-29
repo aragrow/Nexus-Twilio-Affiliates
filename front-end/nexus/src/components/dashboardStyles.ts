@@ -179,6 +179,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#ffffff',
     textShadow: '0 0 8px #00f0ff, 0 0 16px #00f0ff',
   },
+  hamburgerButton: {
+      display: 'block',
+  },
 };
 
 export default styles;
