@@ -121,6 +121,20 @@ const iconMap: { [key: string]: NavItem[] } = {
       action: () => console.log("Show Security Settings"),
     },
   ],
+  Billing: [
+    {
+      id: "usage",
+      IconComponent: PlaceholderIcon,
+      ariaLabel: "Twilio Usage",
+      action: () => console.log("Show Usage"),
+    },
+    {
+      id: "subaccounts",
+      IconComponent: PlaceholderIcon,
+      ariaLabel: "Sub Accounts",
+      action: () => console.log("Show Sub Accounts"),
+    },
+  ],
   // No 'manageAffiliatesView' here as it's not a card menu, but a specific view state
 };
 

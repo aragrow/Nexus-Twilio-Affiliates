@@ -4,7 +4,8 @@ export const styles = {
   // Container styles
   container: {
     maxWidth: 1200,
-    margin: '2rem auto',
+    minWidth: 800,
+    margin: '.2rem auto',
     padding: '1rem',
   },
   
@@ -103,6 +104,7 @@ export const styles = {
   // Table styles
   table: {
     width: '100%',
+    minWidth: '600',
     borderCollapse: 'collapse' as const,
     borderRadius: '0.75rem',
     overflow: 'hidden',

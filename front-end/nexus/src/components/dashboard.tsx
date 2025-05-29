@@ -44,6 +44,7 @@ import {
   HolderAddIcon,
   HolderManageIcon,
   HolderWorkFlowIcon,
+  HolderBillingIcon,
 } from "./icons";
 import styles from "./dashboardStyles";
 
@@ -57,6 +58,7 @@ const SettingsIcon = HolderSettingsIcon;
 const AddIcon = HolderAddIcon;
 const ManageIcon = HolderManageIcon;
 const WorkFlowIcon = HolderWorkFlowIcon;
+const BillingIcon = HolderBillingIcon;
 
 // ========================================================================
 // Custom Hook for Dashboard Navigation & Core Logic
@@ -134,6 +136,12 @@ const useDashboardLogic = () => {
         ariaLabel: "Settings Menu",
         subItemsKey: "Settings",
       },
+      {
+        id: "billingRoot",
+        IconComponent: BillingIcon,
+        ariaLabel: "Billing Menu+",
+        subItemsKey: "Billing",
+      },
     ],
     Affiliates: [
       {
@@ -192,6 +200,7 @@ const useDashboardLogic = () => {
     Settings: [
       /* ... Settings items ... */
     ],
+    Billing: [],
   };
 
   const handleCardClick = useCallback(
