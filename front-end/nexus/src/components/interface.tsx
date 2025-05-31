@@ -272,3 +272,80 @@ export interface EditWorkflowDetailsProps {
   onSave?: (workflow: WorkFlow) => void;
   onBack?: (workflow: WorkFlow) => void;
 }
+
+export interface VirtualNumberCapabilities {
+  voice: boolean;
+  sms: boolean;
+  mms: boolean;
+  fax: boolean;
+}
+
+export interface VirtualNumber {
+  iD: string; // Internal DB ID
+  clientId: string;
+  client?: Client; // Resolved client object
+  phoneNumber: string; // E.164 format
+  friendlyName: string;
+  provider: string; // e.g., "Twilio"
+  providerId?: string; // SID from Twilio
+  countryCode?: string; // e.g., "US"
+  capabilities: VirtualNumberCapabilities;
+  status: "active" | "inactive" | "pending_provisioning" | "porting"; // Application-specific status
+  voiceUrl?: string;
+  smsUrl?: string;
+  dateProvisioned?: string;
+  createdAt: string; // ISO Date string for creation in our DB
+  updatedAt: string; // ISO Date string for update in our DB
+  notes?: string;
+  // For dnd and consistency
+  id?: string; // if 'id' is different from 'iD' or you want to ensure it exists
+}
+
+export interface VirtualNumberFormInput {
+  clientId: string;
+  phoneNumber: string;
+  friendlyName: string;
+  provider?: string;
+  providerId?: string;
+  countryCode?: string;
+  capabilities_voice: boolean;
+  capabilities_sms: boolean;
+  capabilities_mms: boolean;
+  capabilities_fax: boolean;
+  status: "active" | "inactive" | "pending_provisioning" | "porting";
+  voiceUrl?: string;
+  smsUrl?: string;
+  notes?: string;
+}
+
+export interface AddVirtualNumberInput extends VirtualNumberFormInput {}
+
+export interface UpdateVirtualNumberInput extends VirtualNumberFormInput {
+  id: string; // The iD of the VirtualNumber to update
+}
+
+export interface VirtualNumberFormProps {
+  initialValues: VirtualNumberFormInput;
+  clients: Client[]; // For client dropdown
+  onSubmit: (values: VirtualNumberFormInput) => Promise<void>;
+  isSubmitting: boolean;
+  submitButtonText: string;
+  onCancel: () => void;
+}
+
+export interface VirtualNumberResponse {
+  success: boolean;
+  message: string;
+  virtualNumber: VirtualNumber;
+}
+
+export interface AddVirtualNumberProps {
+  onSuccess: (virtualNumber: VirtualNumber) => void;
+  onCancel: () => void;
+}
+
+export interface UpdateVirtualNumberProps {
+  virtualNumber: VirtualNumber;
+  onSuccess: (virtualNumber: VirtualNumber) => void;
+  onCancel: () => void;
+}

@@ -276,6 +276,28 @@ const HolderHamburgerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (
   </svg>
 );
 
+const HolderVirtualNumbersIcon: React.FC<React.SVGProps<SVGSVGElement>> = (
+  props
+) => (
+  <svg
+    width="135" // Adjusted width to fit "Numbers"
+    height="24"
+    viewBox="0 0 135 24" // Adjusted viewBox width
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <text
+      x="0"
+      y="18"
+      fontSize="24"
+      fontFamily="Segoe UI, Tahoma, Geneva, Verdana, sans-serif"
+      fill="currentColor"
+    >
+      Virtual Numbers
+    </text>
+  </svg>
+);
+
 export {
   PlaceholderIcon,
   HolderPowerIcon,
@@ -291,4 +313,5 @@ export {
   HolderReportsIcon,
   HolderBillingIcon,
   HolderHamburgerIcon,
+  HolderVirtualNumbersIcon,
 };

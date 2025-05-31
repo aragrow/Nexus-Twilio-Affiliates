@@ -373,3 +373,104 @@ export const UPDATE_ENTITY = gql`
     }
   }
 `;
+
+export const GET_MANAGE_VIRTUAL_NUMBERS = gql`
+  query GetManageVirtualNumbers($affiliateId: ID, $clientId: ID) {
+    nexusVirtualNumbers(affiliateId: $affiliateId, clientId: $clientId) {
+      iD
+      phoneNumber
+      friendlyName
+      provider
+      providerId
+      countryCode
+      capabilities {
+        voice
+        sms
+        mms
+        fax
+      }
+      status
+      voiceUrl
+      smsUrl
+      dateProvisioned
+      createdAt
+      updatedAt
+      notes
+      clientId
+      client {
+        clientName
+        iD
+      }
+    }
+  }
+`;
+
+export const ADD_VIRTUAL_NUMBER = gql`
+  mutation AddVirtualNumber($input: AddVirtualNumberInput!) {
+    addVirtualNumber(input: $input) {
+      success
+      message
+      virtualNumber {
+        iD
+        phoneNumber
+        friendlyName
+        provider
+        providerId
+        countryCode
+        capabilities {
+          voice
+          sms
+          mms
+          fax
+        }
+        status
+        voiceUrl
+        smsUrl
+        dateProvisioned
+        createdAt
+        updatedAt
+        notes
+        clientId
+        client {
+          clientName
+          iD
+        }
+      }
+    }
+  }
+`;
+
+export const UPDATE_VIRTUAL_NUMBER = gql`
+  mutation UpdateVirtualNumber($input: UpdateVirtualNumberInput!) {
+    updateVirtualNumber(input: $input) {
+      success
+      message
+      virtualNumber {
+        iD
+        phoneNumber
+        friendlyName
+        provider
+        providerId
+        countryCode
+        capabilities {
+          voice
+          sms
+          mms
+          fax
+        }
+        status
+        voiceUrl
+        smsUrl
+        dateProvisioned
+        createdAt
+        updatedAt
+        notes
+        clientId
+        client {
+          clientName
+          iD
+        }
+      }
+    }
+  }
+`;

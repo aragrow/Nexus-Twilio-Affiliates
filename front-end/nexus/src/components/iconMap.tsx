@@ -8,6 +8,7 @@ import {
   HolderManageIcon,
   HolderReportsIcon,
   HolderBillingIcon,
+  HolderVirtualNumbersIcon,
 } from "./icons"; // Assuming this file exists and is correctly set up
 import type { NavItem } from "./interface"; // Assuming this file exists and is correctly set up
 
@@ -19,6 +20,7 @@ const AddIcon = HolderAddIcon;
 const ManageIcon = HolderManageIcon;
 const ReportsIcon = HolderReportsIcon;
 const BillingIcon = HolderBillingIcon;
+const VirtualNumbersIcon = HolderVirtualNumbersIcon;
 // --- End SVG Icon Placeholders ---
 
 // --- Navigation and Action Map ---
@@ -35,6 +37,12 @@ const iconMap: { [key: string]: NavItem[] } = {
       IconComponent: ClientsIcon,
       ariaLabel: "Clients Menu",
       subItemsKey: "Clients",
+    },
+    {
+      id: "virtualNumbersRoot",
+      IconComponent: VirtualNumbersIcon, // Use the new icon
+      ariaLabel: "Virtual Numbers Menu",
+      subItemsKey: "VirtualNumbers", // Or directly to view if no sub-menu
     },
     {
       id: "chatRoot",
@@ -92,6 +100,22 @@ const iconMap: { [key: string]: NavItem[] } = {
       action: () => console.log("Show Manage Clients Table/UI"),
     },
     // ... other client items
+  ],
+  VirtualNumbers: [
+    // If you want a sub-menu for Virtual Numbers
+    {
+      id: "addVirtualNumber",
+      IconComponent: AddIcon,
+      ariaLabel: "Add New Virtual Number",
+      action: () => console.log("Trigger Add New virtual Number"),
+    },
+    {
+      id: "manageVirtualNumbers",
+      IconComponent: ManageIcon, // Or a specific icon
+      ariaLabel: "Manage Virtual Numbers",
+      action: () => setCurrentLevelKey("manageVirtualNumbersView"),
+    },
+    // Potentially an "addVirtualNumber" item here too
   ],
   Chat: [
     {

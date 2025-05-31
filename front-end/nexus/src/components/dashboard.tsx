@@ -14,6 +14,7 @@ import WorkflowDetailsEditor from "./WorkflowDetailsEditor";
 import WorkFlowStepEditor from "./WorkFlowStepEditor"; // <--- IMPORT NEW COMPONENT
 import AffiliateEditForm from "./affiliateEditForm";
 import HamburgerMenu from "./HamburgerMenuProps";
+import VirtualNumbersView from "./VirtualNumbersView"; // Add this
 
 // --- GraphQL & API Imports ---
 import client from "./apolloClient";
@@ -47,6 +48,7 @@ import {
   HolderWorkFlowIcon,
   HolderBillingIcon,
   HolderHamburgerIcon,
+  HolderVirtualNumbersIcon,
 } from "./icons";
 import styles from "./dashboardStyles";
 
@@ -62,6 +64,7 @@ const ManageIcon = HolderManageIcon;
 const WorkFlowIcon = HolderWorkFlowIcon;
 const BillingIcon = HolderBillingIcon;
 const HamburgerIcon = HolderHamburgerIcon;
+const VirtualNumbersIcon = HolderVirtualNumbersIcon; // Add this
 
 // Add to Dashboard component state
 const [isMenuOpen, setIsMenuOpen] = useState(false);
